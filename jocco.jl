@@ -1,3 +1,4 @@
+#!/usr/bin/env julia
 # __Jocco__ is a [Julia] port of [Docco], the quick-and-dirty,
 # hundred-line-long, literate-programming-style documentation generator. It
 # produces HTML that displays your comments alongside your code. Comments are

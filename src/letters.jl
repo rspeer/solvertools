@@ -1,6 +1,6 @@
 using PyCall
 
-## Letter operations
+# ## Letter operations
 # Some functions for working with the 26 capital English letters. If your letters
 # might be lowercase, be sure to use Julia's `uppercase` function on them first.
 function is_ascii_letter(ch::Char)
@@ -22,7 +22,7 @@ function letter_unindex(i::Int)
     end
 end
 
-## Unicode operations
+# ## Unicode operations
 # These operations have significant overhead, because they have to make an
 # external call to Python 3. Julia itself doesn't have a library that gives
 # access to metadata about Unicode characters.
@@ -54,9 +54,9 @@ function standardize_letters(s::ASCIIString)
     replace(uppercase(s), r"[^A-Z]", "")
 end
 
-## Ciphers
+# ## Ciphers
 
-### The Caesar cipher
+# ### The Caesar cipher
 # `caesar_shift`: shift a string or character around the alphabet by a
 # constant number of letters.
 #
@@ -84,7 +84,7 @@ function caesar_shift(letter::Char, shift::Char)
     caesar_shift(letter, letter_index(uppercase(shift)) - 1)
 end
 
-### The Vigenere cipher
+# ### The Vigenère cipher
 # `vigenere`: shift a string around the alphabet according to a cycle of
 # offsets.
 #

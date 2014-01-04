@@ -99,7 +99,7 @@ const footer = "
 # ----------------------------------------------------------------------------
 # Parameters:
 # ----------- ----------------------------------------------------------------
-# `source`    An `ASCIIString`{.julia} of the document source to be parsed.
+# `source`    An `UTF8String`{.julia} of the document source to be parsed.
 # ----------------------------------------------------------------------------
 #
 # ----------------------------------------------------------------------------
@@ -111,7 +111,7 @@ const footer = "
 # ----------------------------------------------------------------------------
 #
 function parse_source(source)
-    code, docs = ASCIIString[], ASCIIString[]
+    code, docs = UTF8String[], UTF8String[]
     f = open(source)
 
     has_code = false
@@ -157,10 +157,10 @@ end
 # ------------ ---------------------------------------------------------------
 # `text_array` An array of text segments to be highlighted as one document.
 #
-# `sep_in`     An `ASCIIString`{.julia} which is inserted between text
+# `sep_in`     An `UTF8String`{.julia} which is inserted between text
 #              segments.
 #
-# `sep_out`    An `ASCIIString`{.julia} searched for as a `--- CUT HERE ---`
+# `sep_out`    An `UTF8String`{.julia} searched for as a `--- CUT HERE ---`
 #              line to split the sections.  This string is removed from the
 #              returned from returned segments.
 #
@@ -199,7 +199,7 @@ function highlight_code(code)
         code[1] = replace(code[1], "<div class=\"highlight\"><pre>", "")
         code[length(code)] = replace(code[length(code)], "</pre></div>", "")
     end
-    unshift!(code,"")
+    #unshift!(code,"")
     code
 end
 
@@ -207,7 +207,7 @@ end
 # extension `wanted_ext`.
 function get_files_with_extension(dir, wanted_ext)
     files = split(chomp(readall(`ls $dir`)), "\n")
-    ext_files = Array(ASCIIString, 1, 0)
+    ext_files = Array(UTF8String, 1, 0)
     for f in files
         filename = joinpath(dir, f)
         ext = splitext(filename)[2]
@@ -224,7 +224,7 @@ end
 #     args = [arg, vals[1], arg, vals[2], arg, vals[3], ...]
 #
 function join_arg_vals(arg, vals)
-    args = Array(ASCIIString, 1, 2*length(vals))
+    args = Array(UTF8String, 1, 2*length(vals))
     args[1:2:end] = arg
     args[2:2:end] = vals
     args
@@ -318,7 +318,9 @@ end
 
 function generate_documentation(source, path, file, jump_to)
     code, docs = parse_source(source)
+    assert(length(code) == length(docs))
     code, docs = highlight_code(code), highlight_docs(docs, path)
+    assert(length(code) == length(docs))
     generate_html(source, path, file, code, docs, jump_to)
 end
 

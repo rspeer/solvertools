@@ -1,0 +1,3 @@
+docs/*.html
+wordlists/*.txt
+.ipynb_checkpoints

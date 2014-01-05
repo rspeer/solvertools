@@ -338,7 +338,7 @@ function optimize(dawg::Dawg)
     backmap = ObjectIdDict()
 
     collect_keysets(dawg, fwdmap, backmap)
-    println("Got $(length(fwdmap)) nodes for $(length(backmap)) words")
+    println("Optimized to $(length(fwdmap)) nodes, from $(length(backmap)) originally")
     optimize_subdawg(dawg, fwdmap, backmap)
 end
 

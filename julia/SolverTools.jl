@@ -4,17 +4,10 @@ using DataFrames
 using Base
 importall Base
 
-function getenv(var::String, default::String)
-    val = ccall( (:getenv, "libc"),
-                Ptr{Uint8}, (Ptr{Uint8},), bytestring(var))
-    if val == C_NULL
-        default
-    else
-        bytestring(val)
-    end
+BASE_PATH = "."
+if haskey(ENV, "SOLVERTOOLS_BASE")
+    BASE_PATH = ENV["SOLVERTOOLS_BASE"]
 end
-
-BASE_PATH = getenv("SOLVERTOOLS_BASE", ".")
 WORDLIST_PATH = joinpath(BASE_PATH, "wordlists")
 
 # ## Letter operations
@@ -269,7 +262,7 @@ function lookup(dawg::Dawg, key::ASCIIString, pos::Int, len::Int)
     end
 end
 
-function has(dawg::Dawg, key::ASCIIString)
+function haskey(dawg::Dawg, key::ASCIIString)
     lookup(dawg, key, 1, length(key))
 end
 

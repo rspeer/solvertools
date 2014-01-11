@@ -133,18 +133,28 @@ function vigenere_1based(letters::String, key::String)
 end
 
 # ## Wordlists
-type Wordlist
-    frame::DataFrame
+type Wordlist{T}
+    wordmap::Dict{String, T}
+    quicklists::Dict{Int, Dict{Char, Array{String}}}
+    
+    function Wordlist()
+        new(Dict{String, T}(),
+            Dict{Int, Dict{Char, Array{String}}}())
+    end
 end
 
-function load_wordlist(filename::String, filepath::String=WORDLIST_PATH)
+function load_wordlist(filename::String, filepath::String=WORDLIST_PATH, T::Type=Int64)
     path = joinpath(filepath, filename)
-    wordlist::DataFrame = readtable(
+    wordframe::DataFrame = readtable(
         path, separator='\t', header=false,
         nastrings=ASCIIString[], colnames=["word", "freq"],
-        coltypes={UTF8String, Int64}
+        coltypes={UTF8String, T}
     )
-    Wordlist(wordlist)
+    build_wordlist(wordframe, T)
+end
+
+function build_wordlist(wordframe::DataFrame, T::Type)
+    Wordlist{T} result = Wordlist
 end
 
 length(w::Wordlist) = nrow(w.frame)

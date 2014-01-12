@@ -10,6 +10,8 @@ if haskey(ENV, "SOLVERTOOLS_BASE")
 end
 WORDLIST_PATH = joinpath(BASE_PATH, "wordlists")
 
+MIN_LOGPROB = -1000.
+
 # ## Letter operations
 # Some functions for working with the 26 capital English letters. If your letters
 # might be lowercase, be sure to use Julia's `uppercase` function on them first.
@@ -133,14 +135,13 @@ function vigenere_1based(letters::String, key::String)
 end
 
 # ## Wordlists
-type Wordlist{T}
-    total::Int
-    wordmap::Dict{String, T}
+type Wordlist
+    wordmap::Dict{String, Float64}
     quickstrings::Dict{Int, Dict{Char, String}}
     sortstring::String
 
     function Wordlist()
-        new(0, Dict{String, T}(),
+        new(Dict{String, Float64}(),
             Dict{Int, Dict{Char, String}}(),
             "")
     end
@@ -156,30 +157,26 @@ function load_wordframe(filename::String, filepath::String=WORDLIST_PATH, T::Typ
     wordframe
 end
 
-function load_wordlist(filename::String, filepath::String=WORDLIST_PATH, T::Type=Int64)
-    wordframe = load_wordframe(filename, filepath, T)
-    build_wordlist(wordframe, T)
+function load_wordlist(filename::String, filepath::String=WORDLIST_PATH)
+    wordframe = load_wordframe(filename, filepath, Int64)
+    build_wordlist(wordframe)
 end
 
-function build_wordlist(wordframe::DataFrame, T::Type)
-    wordlist::Wordlist{T} = Wordlist{T}()
+function build_wordlist(wordframe::DataFrame)
+    wordlist::Wordlist = Wordlist()
     sublists = Dict{Int, Dict{Char, Array{String}}}()
+    total = sum(wordframe[2])
     for row=1:nrow(wordframe)
         word = wordframe[row, 1]
         freq = wordframe[row, 2]
-        wordlist.wordmap[word] = freq
-        wordlist.total += freq
+        wordlist.wordmap[word] = log2(freq) - log2(total)
 
-        # Measure length in bytes because that's how our offsets will work
-        wordlength = length(word.data)
+        wordlength = length(word)
         if !haskey(sublists, wordlength)
             sublists[wordlength] = Dict{Char, Array{String}}()
         end
         lengthlists = sublists[wordlength]
 
-        # Index by starting character (not byte); we know that every string
-        # has a first character even if we don't know where the other
-        # characters are.
         startchar = word[1]
         if !haskey(lengthlists, startchar)
             lengthlists[startchar] = String[]
@@ -213,22 +210,58 @@ function print(io::IO, w::Wordlist)
 end
 show(io::IO, w::Wordlist) = print(io, w)
 
-function getindex(wordlist::Wordlist, i)
-    wordlist.wordmap[i]
+function getindex(wordlist::Wordlist, word)
+    if haskey(wordlist.wordmap, word)
+        wordlist.wordmap[word]
+    else
+        MIN_LOGPROB
+    end
 end
 
-function grep(pattern::String, wordlist::Wordlist, func)
+# ### Optimized grep
+function grep(wordlist::Wordlist, pattern::String, func)
     regex = Regex("^" * pattern * "\$", "im")
     for thematch=eachmatch(regex, wordlist.sortstring)
         func(thematch.match)
     end
 end
 
-function grep(pattern::String, wordlist::Wordlist)
+function grep(wordlist::Wordlist, pattern::String)
     results = UTF8String[]
     grep(regex, wordlist, x -> push!(results, x))
     results
 end
+
+# ### Frequency statistics
+function logprob(wordlist::Wordlist, word::String)
+    wordlist[word]
+end
+
+function interpret_text(wordlist::Wordlist, text::String)
+    best_partial_results = UTF8String[]
+    best_partial_logprob = Float64[]
+    indexes = [chr2ind(text, chr) for chr=1:length(text)]
+    for (rind, right_edge)=enumerate(indexes)
+        push!(best_partial_results, text[1:right_edge])
+        push!(best_partial_logprob, logprob(wordlist, text[1:right_edge]))
+        for (lind, left_edge)=enumerate(indexes)
+            if left_edge >= right_edge
+                break
+            end
+            right_string = text[(left_edge+1):right_edge]
+            left_logprob = best_partial_logprob[lind]
+            right_logprob = logprob(wordlist, right_string)
+            if left_logprob + right_logprob > best_partial_logprob[rind]
+                best_partial_logprob[rind] = left_logprob + right_logprob
+                best_partial_results[rind] = best_partial_results[lind] * " " * right_string
+            end
+        end
+    end
+    return best_partial_results[end], best_partial_logprob[end]
+end
+wordness(wordlist::Wordlist, text::String) = interpret_text(wordlist, text)[2]
+
+# ## Letter distribution statistics
 
 function bigrams(s::UTF8String)
     result = UTF8String[]

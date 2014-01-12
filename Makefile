@@ -2,10 +2,13 @@ PYTHON=python3.3
 
 all: setup wordlists
 
-setup: env/bin/activate julia-setup.log
+setup: env/bin/activate .julia-setup.log .python-setup.log
 
-julia-setup.log: julia/setup.jl
-	julia julia/setup.jl > julia-setup.log
+.julia-setup.log: julia/setup.jl
+	julia julia/setup.jl > .julia-setup.log
+
+.python-setup.log: python/setup.py
+	. env/bin/activate ; cd python ; python setup.py develop > ../.python-setup.log
 
 wordlists: wordlists/enable.txt wordlists/twl06.txt \
 	wordlists/google-books.ascii.freq.txt \

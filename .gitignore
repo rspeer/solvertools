@@ -5,3 +5,5 @@ env/
 .ipynb_checkpoints
 *.log
 *.swp
+*.egg-info
+__pycache__

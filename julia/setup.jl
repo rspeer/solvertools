@@ -1,0 +1,5 @@
+Pkg.update()
+Pkg.add("DataFrames")
+Pkg.add("PyCall")
+Pkg.add("IJulia")
+Pkg.clone("Autoreload")

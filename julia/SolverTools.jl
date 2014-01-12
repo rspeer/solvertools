@@ -134,57 +134,97 @@ end
 
 # ## Wordlists
 type Wordlist{T}
+    total::Int
     wordmap::Dict{String, T}
-    quicklists::Dict{Int, Dict{Char, Array{String}}}
-    
+    quickstrings::Dict{Int, Dict{Char, String}}
+    sortstring::String
+
     function Wordlist()
-        new(Dict{String, T}(),
-            Dict{Int, Dict{Char, Array{String}}}())
+        new(0, Dict{String, T}(),
+            Dict{Int, Dict{Char, String}}(),
+            "")
     end
 end
 
-function load_wordlist(filename::String, filepath::String=WORDLIST_PATH, T::Type=Int64)
+function load_wordframe(filename::String, filepath::String=WORDLIST_PATH, T::Type=Int64)
     path = joinpath(filepath, filename)
     wordframe::DataFrame = readtable(
         path, separator='\t', header=false,
         nastrings=ASCIIString[], colnames=["word", "freq"],
         coltypes={UTF8String, T}
     )
+    wordframe
+end
+
+function load_wordlist(filename::String, filepath::String=WORDLIST_PATH, T::Type=Int64)
+    wordframe = load_wordframe(filename, filepath, T)
     build_wordlist(wordframe, T)
 end
 
 function build_wordlist(wordframe::DataFrame, T::Type)
-    Wordlist{T} result = Wordlist
+    wordlist::Wordlist{T} = Wordlist{T}()
+    sublists = Dict{Int, Dict{Char, Array{String}}}()
+    for row=1:nrow(wordframe)
+        word = wordframe[row, 1]
+        freq = wordframe[row, 2]
+        wordlist.wordmap[word] = freq
+        wordlist.total += freq
+
+        # Measure length in bytes because that's how our offsets will work
+        wordlength = length(word.data)
+        if !haskey(sublists, wordlength)
+            sublists[wordlength] = Dict{Char, Array{String}}()
+        end
+        lengthlists = sublists[wordlength]
+
+        # Index by starting character (not byte); we know that every string
+        # has a first character even if we don't know where the other
+        # characters are.
+        startchar = word[1]
+        if !haskey(lengthlists, startchar)
+            lengthlists[startchar] = String[]
+        end
+        push!(lengthlists[startchar], word)
+    end
+    for len=keys(sublists)
+        wordlist.quickstrings[len] = Dict{Char, String}()
+        for startchar=keys(sublists[len])
+            sublist = sublists[len][startchar]
+            sort!(sublist)
+            wordlist.quickstrings[len][startchar] = join(sublist, '\n')
+        end
+    end
+    # sort the wordlist items in descending order by value (frequency)
+    sorted = sort(collect(keys(wordlist.wordmap)), by=(x -> -(wordlist.wordmap[x])))
+    wordlist.sortstring = join(sorted, '\n')
+    wordlist
 end
 
-length(w::Wordlist) = nrow(w.frame)
+length(w::Wordlist) = length(w.wordmap)
+keys(w::Wordlist) = keys(w.wordmap)
+start(w::Wordlist) = start(w.wordmap)
+next(w::Wordlist, i) = next(w.wordmap, i)
+done(w::Wordlist, i) = done(w.wordmap, i)
 
-start(w::Wordlist) = 1
-next(w::Wordlist, i) = (w[i], i+1)
-done(w::Wordlist, i) = i > length(w)
-
-function words(wordlist::Wordlist)
-    wordlist.frame["word"]
+function print(io::IO, w::Wordlist)
+    len = length(w.wordmap)
+    (sample, state) = next(w, start(w))
+    print(io, "Wordmap with $len entries like $sample")
 end
-
-function asciiwords(wordlist::Wordlist)
-    ret::Array{ASCIIString,1}
-    ret = wordlist.frame["word"]
-end
+show(io::IO, w::Wordlist) = print(io, w)
 
 function getindex(wordlist::Wordlist, i)
-    wordlist.frame[i, "word"], wordlist.frame[i, "freq"]
+    wordlist.wordmap[i]
 end
 
-function grep(regex::Regex, wordlist::Wordlist, func)
-    for word=words(wordlist)
-        if ismatch(regex, word)
-            func(word)
-        end
+function grep(pattern::String, wordlist::Wordlist, func)
+    regex = Regex("^" * pattern * "\$", "im")
+    for thematch=eachmatch(regex, wordlist.sortstring)
+        func(thematch.match)
     end
 end
 
-function grep(regex::Regex, wordlist::Wordlist)
+function grep(pattern::String, wordlist::Wordlist)
     results = UTF8String[]
     grep(regex, wordlist, x -> push!(results, x))
     results
@@ -208,8 +248,7 @@ end
 
 function letter_table(wordlist::Wordlist)
     utable = zeros(Int64, 26)
-    for i=1:length(wordlist)
-        (word, freq) = wordlist[i]
+    for (word, freq)=wordlist
         if is_valid_ascii(word)
             aword = ascii(word)
             for letter in aword
@@ -223,8 +262,7 @@ end
 function bigram_table(wordlist::Wordlist)
     btable = zeros(Int64, (27, 27))
     boundary = 27
-    for i=1:length(wordlist)
-        (word, freq) = wordlist[i]
+    for (word, freq)=wordlist
         if is_valid_ascii(word)
             aword = ascii(word)
             btable[boundary, letter_index(aword[1])] += freq

@@ -1,4 +1,6 @@
 #!/usr/bin/env julia
+# This is a fork of jocco, by lcw: https://github.com/lcw/jocco
+#
 # __Jocco__ is a [Julia] port of [Docco], the quick-and-dirty,
 # hundred-line-long, literate-programming-style documentation generator. It
 # produces HTML that displays your comments alongside your code. Comments are

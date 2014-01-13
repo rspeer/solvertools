@@ -38,5 +38,5 @@ wordlists/twl06.txt: wordlists/raw/twl06.txt
 
 doc: docs/SolverTools.html
 
-docs/SolverTools.html: julia/SolverTools.jl jocco.jl
+docs/SolverTools.html: julia/SolverTools.jl julia/jocco.jl
 	julia julia/jocco.jl julia/SolverTools.jl

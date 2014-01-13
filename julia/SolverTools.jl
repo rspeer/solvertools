@@ -4,15 +4,16 @@ using DataFrames
 using Base
 importall Base
 
-# If we decide to make this a module...
-#export is_ascii_letter, letter_index, letter_unindex
-#export unicode_category, unicode_name, unicode_normalize
-#export roman_letters, roman_letters_and_spaces
-#export caesar_shift, vigenere, vigenere_1based
-#export load_wordframe, load_wordlist, grep, logprob
-#export trim_bigrams
-#export interpret_text, interpret_pattern
-#export letter_bigrams, letter_table, bigram_table
+# If we decide to make this a module, uncomment these:
+#
+#    export is_ascii_letter, letter_index, letter_unindex
+#    export unicode_category, unicode_name, unicode_normalize
+#    export roman_letters, roman_letters_and_spaces
+#    export caesar_shift, vigenere, vigenere_1based
+#    export load_wordframe, load_wordlist, grep, logprob
+#    export trim_bigrams
+#    export interpret_text, interpret_pattern
+#    export letter_bigrams, letter_table, bigram_table
 
 BASE_PATH = "."
 if haskey(ENV, "SOLVERTOOLS_BASE")
@@ -153,14 +154,12 @@ end
 
 # ## Wordlists
 type Wordlist
-    wordmap::Dict{String, Float64}
-    quickstrings::Dict{Int, Dict{Char, String}}
+    wordmap::(String => Float64)
+    quickstrings::(Int => (Char => String))
     sortstring::String
 
     function Wordlist()
-        new(Dict{String, Float64}(),
-            Dict{Int, Dict{Char, String}}(),
-            "")
+        new((String => Float64)[], (Int => (Char => String))[], "")
     end
 end
 
@@ -181,7 +180,7 @@ end
 
 function build_wordlist(wordframe::DataFrame)
     wordlist::Wordlist = Wordlist()
-    sublists = Dict{Int, Dict{Char, Array{String}}}()
+    sublists = (Int => (Char => Array{String}))[]
     total = sum(wordframe[2])
     for row=1:nrow(wordframe)
         word = remove_spaces(wordframe[row, 1])
@@ -196,7 +195,7 @@ function build_wordlist(wordframe::DataFrame)
             continue
         end
         if !haskey(sublists, wordlength)
-            sublists[wordlength] = Dict{Char, Array{String}}()
+            sublists[wordlength] = (Char => Array{String})[]
         end
         lengthlists = sublists[wordlength]
 
@@ -211,7 +210,7 @@ function build_wordlist(wordframe::DataFrame)
     end
     for len=sort(collect(keys(sublists)))
         println("Handling words of length $len")
-        wordlist.quickstrings[len] = Dict{Char, String}()
+        wordlist.quickstrings[len] = (Char => String)[]
         for startchar=keys(sublists[len])
             sublist = sublists[len][startchar]
             wordlist.quickstrings[len][startchar] = join(sublist, '\n')
@@ -271,6 +270,10 @@ function interpret_text(wordlist::Wordlist, text::String)
     best_partial_results = UTF8String[]
     best_partial_logprob = Float64[]
     indexes = [chr2ind(text, chr) for chr=1:length(text)]
+
+    # I keep track of indexes and character offsets separately, so that
+    # this code could keep working given non-ASCII input. For example,
+    # I may want to do things with IPA.
     for (rind, right_edge)=enumerate(indexes)
         push!(best_partial_results, text[1:right_edge])
         push!(best_partial_logprob, logprob(wordlist, text[1:right_edge]))
@@ -344,7 +347,7 @@ function interpret_pattern(wordlist::Wordlist, pattern::String, func, max::Int=1
     deterministic = Bool[regextools.is_deterministic(piece) for piece=pieces]
 
     pqueue = PriorityQueue{(Int64, String, Float64), Float64}()
-    best_at_position = Dict{Int64, Float64}()
+    best_at_position = (Int64 => Float64)[]
     pqueue[(0, "", 0.)] = 0.
 
     for len=1:max
@@ -361,9 +364,9 @@ function interpret_pattern(wordlist::Wordlist, pattern::String, func, max::Int=1
     results = 0
     while results < max
         pos, string_so_far, score = pop!(pqueue)
+        # not done yet
     end
 end
-
 
 
 

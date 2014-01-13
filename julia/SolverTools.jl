@@ -4,11 +4,20 @@ using DataFrames
 using Base
 importall Base
 
+# If we decide to make this a module...
+#export is_ascii_letter, letter_index, letter_unindex
+#export unicode_category, unicode_name, unicode_normalize
+#export roman_letters, roman_letters_and_spaces
+#export caesar_shift, vigenere, vigenere_1based
+#export load_wordframe, load_wordlist, grep, logprob
+#export trim_bigrams
+#export interpret_text, interpret_pattern
+#export letter_bigrams, letter_table, bigram_table
+
 BASE_PATH = "."
 if haskey(ENV, "SOLVERTOOLS_BASE")
     BASE_PATH = ENV["SOLVERTOOLS_BASE"]
 end
-WORDLIST_PATH = joinpath(BASE_PATH, "wordlists")
 
 MIN_LOGPROB = -1000.
 
@@ -55,6 +64,10 @@ function unicode_normalize(s::String)
     unicodedata.normalize("NFKC", s)
 end
 
+function unicode_decompose(s::String)
+    unicodedata.normalize("NFKD", s)
+end
+
 # `roman_letters`: Remove accents, convert to uppercase, and keep only
 # the letters A-Z.
 function roman_letters(s::UTF8String)
@@ -73,6 +86,10 @@ function roman_letters_and_spaces(s::UTF8String)
         decomposed = unicodedata.normalize("NFKD", uppercase(s))
     end
     replace(decomposed, r"[^A-Z ]", "")
+end
+
+function remove_spaces(s::UTF8String)
+    replace(s, " ", "")
 end
 
 # ## Ciphers
@@ -147,7 +164,7 @@ type Wordlist
     end
 end
 
-function load_wordframe(filename::String, filepath::String=WORDLIST_PATH, T::Type=Int64)
+function load_wordframe(filename::String, filepath::String=BASE_PATH, T::Type=Int64)
     path = joinpath(filepath, filename)
     wordframe::DataFrame = readtable(
         path, separator='\t', header=false,
@@ -157,7 +174,7 @@ function load_wordframe(filename::String, filepath::String=WORDLIST_PATH, T::Typ
     wordframe
 end
 
-function load_wordlist(filename::String, filepath::String=WORDLIST_PATH)
+function load_wordlist(filename::String, filepath::String=BASE_PATH)
     wordframe = load_wordframe(filename, filepath, Int64)
     build_wordlist(wordframe)
 end
@@ -167,11 +184,17 @@ function build_wordlist(wordframe::DataFrame)
     sublists = Dict{Int, Dict{Char, Array{String}}}()
     total = sum(wordframe[2])
     for row=1:nrow(wordframe)
-        word = wordframe[row, 1]
+        word = remove_spaces(wordframe[row, 1])
+        if haskey(wordlist.wordmap, word)
+            continue
+        end
         freq = wordframe[row, 2]
         wordlist.wordmap[word] = log2(freq) - log2(total)
 
         wordlength = length(word)
+        if wordlength > 30
+            continue
+        end
         if !haskey(sublists, wordlength)
             sublists[wordlength] = Dict{Char, Array{String}}()
         end
@@ -182,17 +205,20 @@ function build_wordlist(wordframe::DataFrame)
             lengthlists[startchar] = String[]
         end
         push!(lengthlists[startchar], word)
+        if row % 100000 == 0
+            println("Read $row words")
+        end
     end
-    for len=keys(sublists)
+    for len=sort(collect(keys(sublists)))
+        println("Handling words of length $len")
         wordlist.quickstrings[len] = Dict{Char, String}()
         for startchar=keys(sublists[len])
             sublist = sublists[len][startchar]
-            sort!(sublist)
             wordlist.quickstrings[len][startchar] = join(sublist, '\n')
         end
     end
-    # sort the wordlist items in descending order by value (frequency)
-    sorted = sort(collect(keys(wordlist.wordmap)), by=(x -> -(wordlist.wordmap[x])))
+    println("Storing greppable string")
+    sorted = [remove_spaces(x) for x=wordframe[1]]
     wordlist.sortstring = join(sorted, '\n')
     wordlist
 end
@@ -237,6 +263,10 @@ function logprob(wordlist::Wordlist, word::String)
     wordlist[word]
 end
 
+function haskey(wordlist::Wordlist, word::String)
+    haskey(wordlist.wordmap, word)
+end
+
 function interpret_text(wordlist::Wordlist, text::String)
     best_partial_results = UTF8String[]
     best_partial_logprob = Float64[]
@@ -259,11 +289,87 @@ function interpret_text(wordlist::Wordlist, text::String)
     end
     return best_partial_results[end], best_partial_logprob[end]
 end
-wordness(wordlist::Wordlist, text::String) = interpret_text(wordlist, text)[2]
+
+function wordness(wordlist::Wordlist, text::String)
+    if length(text) == 0
+        return 0.
+    else
+        logprob = interpret_text(wordlist, text)[2]
+        return logprob / length(text)
+    end
+end
+
+# ## Filtering word bigrams
+# Take in a table of word bigrams, and use a unigram wordlist to keep
+# only the interesting ones.
+
+function trim_bigrams(unigram_filename::String, bigram_filename::String, ratio::Real)
+    bigram_frame = load_wordframe(bigram_filename)
+    unigram_list = load_wordlist(unigram_filename)
+    total_bigrams = sum(bigram_frame[2])
+    logratio = log2(ratio)
+    logtotal = log2(total_bigrams)
+
+    for row=1:nrow(bigram_frame)
+        bigram = bigram_frame[row, 1]
+        freq = bigram_frame[row, 2]
+        (word1, word2) = split(bigram, " ")
+        if haskey(unigram_list, word1) && haskey(unigram_list, word2)
+            bigram_logprob = log2(freq) - logtotal
+            unigram_logprob = logprob(unigram_list, word1) + logprob(unigram_list, word2)
+            score = bigram_logprob - unigram_logprob
+            if score > logratio
+                println("$bigram\t$freq\t$score")
+            end
+        end
+    end
+end
+
+# ## Regex operations
+# We'll need some help from Python for this.
+
+@pyimport regextools
+function interpret_pattern(wordlist::Wordlist, pattern::String, func, max::Int=100)
+    if regextools.is_deterministic(pattern)
+        return interpret_text(wordlist, pattern)
+    end
+
+    min, max = regextools.regex_len(pattern)
+    if min != max
+        return grep(wordlist, pattern)
+    end
+
+    # Subtract 1 from all indices, because Python is 0-based
+    pieces = UTF8String[regextools.regex_index(pattern, i-1) for i=1:max]
+    deterministic = Bool[regextools.is_deterministic(piece) for piece=pieces]
+
+    pqueue = PriorityQueue{(Int64, String, Float64), Float64}()
+    best_at_position = Dict{Int64, Float64}()
+    pqueue[(0, "", 0.)] = 0.
+
+    for len=1:max
+        if haskey(wordlist.quickstrings, len)
+            start_letter = regextools.regex_index(pattern, 0)
+            if is_deterministic(start_letter)
+                greplist = wordlist.quickstrings[len][start_letter]
+            else
+                greplist = wordlist.sortstring
+            end
+        end
+    end
+
+    results = 0
+    while results < max
+        pos, string_so_far, score = pop!(pqueue)
+    end
+end
+
+
+
 
 # ## Letter distribution statistics
 
-function bigrams(s::UTF8String)
+function letter_bigrams(s::UTF8String)
     result = UTF8String[]
     i = 1
     lasti = endof(s)
@@ -275,7 +381,7 @@ function bigrams(s::UTF8String)
     result
 end
 
-function bigrams(s::ASCIIString)
+function letter_bigrams(s::ASCIIString)
     [s[i:i+1] for i=1:length(s) - 1]
 end
 
@@ -299,7 +405,7 @@ function bigram_table(wordlist::Wordlist)
         if is_valid_ascii(word)
             aword = ascii(word)
             btable[boundary, letter_index(aword[1])] += freq
-            for b=bigrams(aword)
+            for b=letter_bigrams(aword)
                 i1 = letter_index(b[1])
                 i2 = letter_index(b[2])
                 btable[i1, i2] += freq
@@ -309,4 +415,3 @@ function bigram_table(wordlist::Wordlist)
     end
     btable
 end
-

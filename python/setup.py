@@ -6,7 +6,7 @@ from setuptools import setup
 setup(
     name="solvertools",
     version=VERSION,
-    py_modules=['regex'],
+    py_modules=['regextools'],
     install_requires=[
     ],
 )

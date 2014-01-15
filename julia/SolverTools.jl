@@ -7,17 +7,6 @@ using PyCall
 # replacing them. This is much more convenient.
 importall Base
 
-# If we decide to make this a module, uncomment these:
-#
-#    export is_ascii_letter, letter_index, letter_unindex
-#    export unicode_category, unicode_name, unicode_normalize
-#    export roman_letters, roman_letters_and_spaces
-#    export caesar_shift, vigenere, vigenere_1based
-#    export load_wordframe, load_wordlist, grep, logprob
-#    export trim_bigrams
-#    export interpret_text, interpret_pattern
-#    export letter_bigrams, letter_table, bigram_table
-
 BASE_PATH = "."
 if haskey(ENV, "SOLVERTOOLS_BASE")
     BASE_PATH = ENV["SOLVERTOOLS_BASE"]
@@ -322,7 +311,7 @@ function interpret_pattern(wordlist::Wordlist, pattern::String,
     sort!(eval_results, by=(x -> -x[2]))
     #elapsed = time() - st
     #println("interpret_pattern: $elapsed")
-    eval_results[1:limit]
+    eval_results[1:min(limit, length(eval_results))]
 end
 
 

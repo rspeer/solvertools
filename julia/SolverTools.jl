@@ -1,7 +1,10 @@
 # ## Getting stuff set up
 using PyCall
-using DataFrames
-using Base
+
+# `importall Base` means that, when we define methods such as `print()` and
+# `haskey()`, we're automatically extending the built-in functions. Otherwise
+# we'd have to be explicit about the fact that we're extending them, not
+# replacing them. This is much more convenient.
 importall Base
 
 # If we decide to make this a module, uncomment these:
@@ -20,7 +23,10 @@ if haskey(ENV, "SOLVERTOOLS_BASE")
     BASE_PATH = ENV["SOLVERTOOLS_BASE"]
 end
 
-MIN_LOGPROB = -1000.
+# I split Wordlist into a separate file because it defines a new type, and types are really hard to reload interactively.
+#require(joinpath(BASE_PATH, "julia", "wordlists.jl"))
+require("wordlists.jl")
+using Wordlists
 
 # ## Letter operations
 # Some functions for working with the 26 capital English letters. If your letters
@@ -89,10 +95,6 @@ function roman_letters_and_spaces(s::UTF8String)
     replace(decomposed, r"[^A-Z ]", "")
 end
 
-function remove_spaces(s::UTF8String)
-    replace(s, " ", "")
-end
-
 # ## Ciphers
 
 # ### The Caesar cipher
@@ -152,98 +154,12 @@ function vigenere_1based(letters::String, key::String)
     caesar_shift(vigenere(letters, key), 1)
 end
 
-# ## Wordlists
-type Wordlist
-    wordmap::(String => Float64)
-    quickstrings::(Int => (Char => String))
-    sortstring::String
-
-    function Wordlist()
-        new((String => Float64)[], (Int => (Char => String))[], "")
-    end
-end
-
-function load_wordframe(filename::String, filepath::String=BASE_PATH, T::Type=Int64)
-    path = joinpath(filepath, filename)
-    wordframe::DataFrame = readtable(
-        path, separator='\t', header=false,
-        nastrings=ASCIIString[], colnames=["word", "freq"],
-        coltypes={UTF8String, T}
-    )
-    wordframe
-end
-
-function load_wordlist(filename::String, filepath::String=BASE_PATH)
-    wordframe = load_wordframe(filename, filepath, Int64)
-    build_wordlist(wordframe)
-end
-
-function build_wordlist(wordframe::DataFrame)
-    wordlist::Wordlist = Wordlist()
-    sublists = (Int => (Char => Array{String}))[]
-    total = sum(wordframe[2])
-    for row=1:nrow(wordframe)
-        word = remove_spaces(wordframe[row, 1])
-        if haskey(wordlist.wordmap, word)
-            continue
-        end
-        freq = wordframe[row, 2]
-        wordlist.wordmap[word] = log2(freq) - log2(total)
-
-        wordlength = length(word)
-        if wordlength > 30
-            continue
-        end
-        if !haskey(sublists, wordlength)
-            sublists[wordlength] = (Char => Array{String})[]
-        end
-        lengthlists = sublists[wordlength]
-
-        startchar = word[1]
-        if !haskey(lengthlists, startchar)
-            lengthlists[startchar] = String[]
-        end
-        push!(lengthlists[startchar], word)
-        if row % 100000 == 0
-            println("Read $row words")
-        end
-    end
-    for len=sort(collect(keys(sublists)))
-        println("Handling words of length $len")
-        wordlist.quickstrings[len] = (Char => String)[]
-        for startchar=keys(sublists[len])
-            sublist = sublists[len][startchar]
-            wordlist.quickstrings[len][startchar] = join(sublist, '\n')
-        end
-    end
-    println("Storing greppable string")
-    sorted = [remove_spaces(x) for x=wordframe[1]]
-    wordlist.sortstring = join(sorted, '\n')
-    wordlist
-end
-
-length(w::Wordlist) = length(w.wordmap)
-keys(w::Wordlist) = keys(w.wordmap)
-start(w::Wordlist) = start(w.wordmap)
-next(w::Wordlist, i) = next(w.wordmap, i)
-done(w::Wordlist, i) = done(w.wordmap, i)
-
-function print(io::IO, w::Wordlist)
-    len = length(w.wordmap)
-    (sample, state) = next(w, start(w))
-    print(io, "Wordmap with $len entries like $sample")
-end
-show(io::IO, w::Wordlist) = print(io, w)
-
-function getindex(wordlist::Wordlist, word)
-    if haskey(wordlist.wordmap, word)
-        wordlist.wordmap[word]
-    else
-        MIN_LOGPROB
-    end
-end
 
 # ### Optimized grep
+
+# We'll need some help from Python for regex manipulation.
+@pyimport regextools
+
 function grep(wordlist::Wordlist, pattern::String, func)
     regex = Regex("^" * pattern * "\$", "im")
     for thematch=eachmatch(regex, wordlist.sortstring)
@@ -254,6 +170,33 @@ end
 function grep(wordlist::Wordlist, pattern::String)
     results = UTF8String[]
     grep(regex, wordlist, x -> push!(results, x))
+    results
+end
+
+function grep_fixed(wordlist::Wordlist, pattern::String, len::Int, func)
+    # We're calling Python, so it's 0-indexed
+    regex_first = uppercase(regextools.regex_index(pattern, 0))
+    if !regextools.is_deterministic(regex_first)
+        grep(wordlist, pattern, func)
+    else
+        regex = Regex("^" * pattern * "\$", "im")
+        if !haskey(wordlist.quickstrings, len)
+            return
+        end
+        lengthdict = wordlist.quickstrings[len]
+        if !haskey(lengthdict, regex_first)
+            return
+        end
+        quickstring = lengthdict[regex_first]
+        for thematch=eachmatch(regex, quickstring)
+            func(thematch.match)
+        end
+    end
+end
+
+function grep_fixed(wordlist::Wordlist, pattern::String, len::Int)
+    results = UTF8String[]
+    grep_fixed(wordlist, pattern, len, x -> push!(results, x))
     results
 end
 
@@ -329,45 +272,51 @@ function trim_bigrams(unigram_filename::String, bigram_filename::String, ratio::
 end
 
 # ## Regex operations
-# We'll need some help from Python for this.
-
-@pyimport regextools
-function interpret_pattern(wordlist::Wordlist, pattern::String, func, max::Int=100)
+function interpret_pattern(wordlist::Wordlist, pattern::String, 
+                           limit::Int=100, beam::Int=5)
     if regextools.is_deterministic(pattern)
         return interpret_text(wordlist, pattern)
     end
 
-    min, max = regextools.regex_len(pattern)
-    if min != max
+    # If this isn't a fixed-length regex, fall back on ordinary "grep",
+    # without assembling phrases.
+    minlen, maxlen = regextools.regex_len(pattern)
+    if minlen != maxlen
         return grep(wordlist, pattern)
     end
+    regex_len::Int = maxlen
 
     # Subtract 1 from all indices, because Python is 0-based
-    pieces = UTF8String[regextools.regex_index(pattern, i-1) for i=1:max]
-    deterministic = Bool[regextools.is_deterministic(piece) for piece=pieces]
+    pieces = UTF8String[regextools.regex_index(pattern, i-1) for i=1:regex_len]
 
-    pqueue = PriorityQueue{(Int64, String, Float64), Float64}()
-    best_at_position = (Int64 => Float64)[]
-    pqueue[(0, "", 0.)] = 0.
+    # Don't be confused by the type syntax. These aren't arrays of strings,
+    # they're (ragged) arrays of arrays of strings. Maybe Julia will add syntax
+    # for this with two sets of brackets someday.
+    left_partials = Array{String}[]
+    results = String[]
 
-    for len=1:max
-        if haskey(wordlist.quickstrings, len)
-            start_letter = regextools.regex_index(pattern, 0)
-            if is_deterministic(start_letter)
-                greplist = wordlist.quickstrings[len][start_letter]
-            else
-                greplist = wordlist.sortstring
-            end
+    for split_point=1:(regex_len-1)
+        left_regex = join(pieces[1:split_point])
+        matches = grep_fixed(wordlist, left_regex, split_point)
+        push!(left_partials, matches)
+    end
+    for split_point=1:regex_len
+        right_regex = join(pieces[split_point:regex_len])
+        rmatches = grep_fixed(wordlist, right_regex, regex_len - split_point + 1)
+        lmatches = String[""]
+        if split_point > 1
+            lmatches = left_partials[split_point - 1]
         end
+        for i=1:min(beam, length(lmatches))
+            for j=1:min(beam, length(rmatches))
+                push!(results, lmatches[i] * rmatches[j])
+            end
+        end     
     end
-
-    results = 0
-    while results < max
-        pos, string_so_far, score = pop!(pqueue)
-        # not done yet
-    end
+    eval_results = [interpret_text(wordlist, word) for word=results]
+    sort!(eval_results, by=(x -> -x[2]))
+    eval_results[1:limit]
 end
-
 
 
 # ## Letter distribution statistics

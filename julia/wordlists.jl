@@ -4,7 +4,7 @@ using DataFrames
 using Base
 importall Base
 
-export Wordlist, load_wordframe, load_wordlist, build_wordlist
+export Wordlist, load_wordframe, load_wordlist, build_wordlist, logprob, canonicalize
 
 BASE_PATH = "."
 if haskey(ENV, "SOLVERTOOLS_BASE")
@@ -15,12 +15,14 @@ MIN_LOGPROB = -1000.
 
 type Wordlist
     wordmap::Dict{String, Float64}
+    canonical::Dict{String, String}
     quickstrings::Dict{Int, Dict{Char, String}}
     sortstring::String
 
     function Wordlist()
         new(
             Dict{String, Float64}(),
+            Dict{String, String}(),
             Dict{Int, Dict{Char, String}}(),
             ""
         )
@@ -51,10 +53,15 @@ function build_wordlist(wordframe::DataFrame)
     sublists = Dict{Int, Dict{Char, Array{String}}}()
     total = sum(wordframe[2])
     for row=1:nrow(wordframe)
-        word = remove_spaces(wordframe[row, 1])
+        origword = wordframe[row, 1]
+        word = remove_spaces(origword)
         if haskey(wordlist.wordmap, word)
             continue
         end
+        if word != origword
+            wordlist.canonical[word] = origword
+        end
+        
         freq = wordframe[row, 2]
         wordlist.wordmap[word] = log2(freq) - log2(total)
 
@@ -108,6 +115,22 @@ function getindex(wordlist::Wordlist, word)
         wordlist.wordmap[word]
     else
         MIN_LOGPROB
+    end
+end
+
+function logprob(wordlist::Wordlist, word::String)
+    wordlist[word]
+end
+
+function haskey(wordlist::Wordlist, word::String)
+    haskey(wordlist.wordmap, word)
+end
+
+function canonicalize(wordlist::Wordlist, word::String)
+    if haskey(wordlist.canonical, word)
+        wordlist.canonical[word]
+    else
+        word
     end
 end
 

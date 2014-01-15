@@ -160,20 +160,25 @@ end
 # We'll need some help from Python for regex manipulation.
 @pyimport regextools
 
-function grep(wordlist::Wordlist, pattern::String, func)
+function grep(wordlist::Wordlist, pattern::String, func, limit::Int=10)
     regex = Regex("^" * pattern * "\$", "im")
+    count = 0
     for thematch=eachmatch(regex, wordlist.sortstring)
         func(thematch.match)
+        count += 1
+        if count >= limit
+            return
+        end
     end
 end
 
-function grep(wordlist::Wordlist, pattern::String)
+function grep(wordlist::Wordlist, pattern::String, limit::Int=10)
     results = UTF8String[]
-    grep(regex, wordlist, x -> push!(results, x))
+    grep(wordlist, pattern, x -> push!(results, x), limit)
     results
 end
 
-function grep_fixed(wordlist::Wordlist, pattern::String, len::Int, func)
+function grep_fixed(wordlist::Wordlist, pattern::String, len::Int, func, limit::Int=10)
     # We're calling Python, so it's 0-indexed
     regex_first = uppercase(regextools.regex_index(pattern, 0))
     if !regextools.is_deterministic(regex_first)
@@ -188,27 +193,24 @@ function grep_fixed(wordlist::Wordlist, pattern::String, len::Int, func)
             return
         end
         quickstring = lengthdict[regex_first]
+        count = 0
         for thematch=eachmatch(regex, quickstring)
             func(thematch.match)
+            count += 1
+            if count >= limit
+                return
+            end
         end
     end
 end
 
-function grep_fixed(wordlist::Wordlist, pattern::String, len::Int)
+function grep_fixed(wordlist::Wordlist, pattern::String, len::Int, limit::Int=10)
     results = UTF8String[]
-    grep_fixed(wordlist, pattern, len, x -> push!(results, x))
+    grep_fixed(wordlist, pattern, len, x -> push!(results, x), limit)
     results
 end
 
 # ### Frequency statistics
-function logprob(wordlist::Wordlist, word::String)
-    wordlist[word]
-end
-
-function haskey(wordlist::Wordlist, word::String)
-    haskey(wordlist.wordmap, word)
-end
-
 function interpret_text(wordlist::Wordlist, text::String)
     best_partial_results = UTF8String[]
     best_partial_logprob = Float64[]
@@ -218,13 +220,13 @@ function interpret_text(wordlist::Wordlist, text::String)
     # this code could keep working given non-ASCII input. For example,
     # I may want to do things with IPA.
     for (rind, right_edge)=enumerate(indexes)
-        push!(best_partial_results, text[1:right_edge])
+        push!(best_partial_results, canonicalize(wordlist, text[1:right_edge]))
         push!(best_partial_logprob, logprob(wordlist, text[1:right_edge]))
         for (lind, left_edge)=enumerate(indexes)
             if left_edge >= right_edge
                 break
             end
-            right_string = text[(left_edge+1):right_edge]
+            right_string = canonicalize(wordlist, text[(left_edge+1):right_edge])
             left_logprob = best_partial_logprob[lind]
             right_logprob = logprob(wordlist, right_string)
             if left_logprob + right_logprob > best_partial_logprob[rind]
@@ -274,6 +276,7 @@ end
 # ## Regex operations
 function interpret_pattern(wordlist::Wordlist, pattern::String, 
                            limit::Int=100, beam::Int=5)
+    st = time()
     if regextools.is_deterministic(pattern)
         return interpret_text(wordlist, pattern)
     end
@@ -297,24 +300,28 @@ function interpret_pattern(wordlist::Wordlist, pattern::String,
 
     for split_point=1:(regex_len-1)
         left_regex = join(pieces[1:split_point])
-        matches = grep_fixed(wordlist, left_regex, split_point)
+        matches = grep_fixed(wordlist, left_regex, split_point, beam)
         push!(left_partials, matches)
     end
+
     for split_point=1:regex_len
         right_regex = join(pieces[split_point:regex_len])
-        rmatches = grep_fixed(wordlist, right_regex, regex_len - split_point + 1)
+        rmatches = grep_fixed(wordlist, right_regex, regex_len - split_point + 1, beam)
         lmatches = String[""]
         if split_point > 1
             lmatches = left_partials[split_point - 1]
         end
-        for i=1:min(beam, length(lmatches))
-            for j=1:min(beam, length(rmatches))
-                push!(results, lmatches[i] * rmatches[j])
+        for lmatch=lmatches
+            for rmatch=rmatches
+                push!(results, lmatch * rmatch)
             end
         end     
     end
+    
     eval_results = [interpret_text(wordlist, word) for word=results]
     sort!(eval_results, by=(x -> -x[2]))
+    #elapsed = time() - st
+    #println("interpret_pattern: $elapsed")
     eval_results[1:limit]
 end
 

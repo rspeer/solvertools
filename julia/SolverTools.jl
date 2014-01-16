@@ -263,8 +263,8 @@ function trim_bigrams(unigram_filename::String, bigram_filename::String, ratio::
 end
 
 # ## Regex operations
-function interpret_pattern(wordlist::Wordlist, pattern::String, 
-                           limit::Int=100, beam::Int=5)
+function interpret_pattern(wordlist::Wordlist, pattern::String,
+                           limit::Int=20, beam::Int=3)
     st = time()
     if regextools.is_deterministic(pattern)
         return interpret_text(wordlist, pattern)
@@ -304,16 +304,16 @@ function interpret_pattern(wordlist::Wordlist, pattern::String,
             for rmatch=rmatches
                 push!(results, lmatch * rmatch)
             end
-        end     
+        end
     end
-    
+
     eval_results = [interpret_text(wordlist, word) for word=results]
     sort!(eval_results, by=(x -> -x[2]))
     #elapsed = time() - st
     #println("interpret_pattern: $elapsed")
     eval_results[1:min(limit, length(eval_results))]
 end
-
+metatron = interpret_pattern
 
 # ## Letter distribution statistics
 

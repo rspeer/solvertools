@@ -167,38 +167,6 @@ function grep(wordlist::Wordlist, pattern::String, limit::Int=10)
     results
 end
 
-function grep_fixed(wordlist::Wordlist, pattern::String, len::Int, func, limit::Int=10)
-    # We're calling Python, so it's 0-indexed
-    regex_first = uppercase(regextools.regex_index(pattern, 0))
-    if !regextools.is_deterministic(regex_first)
-        grep(wordlist, pattern, func)
-    else
-        regex = Regex("^" * pattern * "\$", "im")
-        if !haskey(wordlist.quickstrings, len)
-            return
-        end
-        lengthdict = wordlist.quickstrings[len]
-        if !haskey(lengthdict, regex_first)
-            return
-        end
-        quickstring = lengthdict[regex_first]
-        count = 0
-        for thematch=eachmatch(regex, quickstring)
-            func(thematch.match)
-            count += 1
-            if count >= limit
-                return
-            end
-        end
-    end
-end
-
-function grep_fixed(wordlist::Wordlist, pattern::String, len::Int, limit::Int=10)
-    results = UTF8String[]
-    grep_fixed(wordlist, pattern, len, x -> push!(results, x), limit)
-    results
-end
-
 # ### Frequency statistics
 function interpret_text(wordlist::Wordlist, text::String)
     best_partial_results = UTF8String[]
@@ -289,13 +257,13 @@ function interpret_pattern(wordlist::Wordlist, pattern::String,
 
     for split_point=1:(regex_len-1)
         left_regex = join(pieces[1:split_point])
-        matches = grep_fixed(wordlist, left_regex, split_point, beam)
+        matches = grep(wordlist, left_regex, beam)
         push!(left_partials, matches)
     end
 
     for split_point=1:regex_len
         right_regex = join(pieces[split_point:regex_len])
-        rmatches = grep_fixed(wordlist, right_regex, regex_len - split_point + 1, beam)
+        rmatches = grep(wordlist, right_regex, beam)
         lmatches = String[""]
         if split_point > 1
             lmatches = left_partials[split_point - 1]

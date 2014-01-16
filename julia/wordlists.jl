@@ -14,16 +14,14 @@ end
 MIN_LOGPROB = -1000.
 
 type Wordlist
-    wordmap::Dict{String, Float64}
+    wordmap::Dict{String, Float32}
     canonical::Dict{String, String}
-    quickstrings::Dict{Int, Dict{Char, String}}
     sortstring::String
 
     function Wordlist()
         new(
-            Dict{String, Float64}(),
+            Dict{String, Float32}(),
             Dict{String, String}(),
-            Dict{Int, Dict{Char, String}}(),
             ""
         )
     end
@@ -44,13 +42,13 @@ function load_wordframe(filename::String, filepath::String=BASE_PATH, T::Type=In
 end
 
 function load_wordlist(filename::String, filepath::String=BASE_PATH)
+    println("Loading wordlist: $filename")
     wordframe = load_wordframe(filename, filepath, Int64)
     build_wordlist(wordframe)
 end
 
 function build_wordlist(wordframe::DataFrame)
     wordlist::Wordlist = Wordlist()
-    sublists = Dict{Int, Dict{Char, Array{String}}}()
     total = sum(wordframe[2])
     for row=1:nrow(wordframe)
         origword = wordframe[row, 1]
@@ -65,33 +63,11 @@ function build_wordlist(wordframe::DataFrame)
         freq = wordframe[row, 2]
         wordlist.wordmap[word] = log2(freq) - log2(total)
 
-        wordlength = length(word)
-        if wordlength > 30
-            continue
-        end
-        if !haskey(sublists, wordlength)
-            sublists[wordlength] = Dict{Char, Array{String}}()
-        end
-        lengthlists = sublists[wordlength]
-
-        startchar = word[1]
-        if !haskey(lengthlists, startchar)
-            lengthlists[startchar] = String[]
-        end
-        push!(lengthlists[startchar], word)
-        if row % 100000 == 0
-            println("Read $row words")
+        if row % 1000000 == 0
+            println("\tRead $row words")
         end
     end
-    for len=sort(collect(keys(sublists)))
-        println("Handling words of length $len")
-        wordlist.quickstrings[len] = Dict{Char, String}()
-        for startchar=keys(sublists[len])
-            sublist = sublists[len][startchar]
-            wordlist.quickstrings[len][startchar] = join(sublist, '\n')
-        end
-    end
-    println("Storing greppable string")
+    println("\tStoring greppable string")
     sorted = [remove_spaces(x) for x=wordframe[1]]
     wordlist.sortstring = join(sorted, '\n')
     wordlist

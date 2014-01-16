@@ -89,11 +89,40 @@ end
 function anagram_single(atable::AnagramTable, vec::LetterCountVec)
     alph = alphagram(vec)
     if haskey(atable.alpha_map, alph)
-        return atable.alph_map[alph]
+        return atable.alpha_map[alph]
     else
         return []
     end
 end
+
+function anagram_single(atable::AnagramTable, vec::LetterCountVec, wildcards::Int)
+    if wildcards == 0
+        return anagram_single(atable, vec)
+    end
+    nletters = sum(vec) + wildcards
+    if nletters + 1 > length(atable.offsets)
+        error("Too many letters")
+    end
+    mincol = atable.offsets[nletters]
+    maxcol = atable.offsets[nletters + 1] - 1
+    results = []
+    tempvec = zeros(Int8, 26)
+    for col=mincol:maxcol
+        remain = wildcards
+        for row=26:-1:1
+            diff = vec[row] - atable.table[row, col]
+            if diff < 0
+                remain += diff
+                if remain < 0
+                    break
+                end
+            end
+        end
+        if remain == 0
+            alph = atable.labels[col]
+            append!(results, atable.alpha_map[alph])
+end
+
 
 function anagram_double(atable::AnagramTable, vec::LetterCountVec, limit::Int=10000)
     results = (String, Float32)[]

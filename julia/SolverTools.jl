@@ -483,6 +483,7 @@ function build_anagram_table(wordlist)
     col = 0
     wordorder = sort(collect(split(wordlist.sortstring, "\n")), by=length, alg=MergeSort)
     offsets = Int[1]
+    cur_offset = 1
     for word=wordorder
         alph = alphagram(word)
         if haskey(alpha_map, alph)
@@ -493,11 +494,12 @@ function build_anagram_table(wordlist)
             col += 1
             table[:, col] = letters_to_vec(alph)
             push!(labels, alph)
-            alpha_map[alph] = [canonicalize(wordlist, word)]
+            alpha_map[alph] = String[canonicalize(wordlist, word)]
 
             wordlen = length(alph)
-            if wordlen > length(offsets)
+            if wordlen > cur_offset
                 push!(offsets, col)
+                cur_offset += 1
                 println("\tgenerating alphagrams of $wordlen letters")
             end
         end
@@ -514,12 +516,48 @@ function anagram_single(atable::AnagramTable, vec::LetterCountVec)
     end
 end
 
+function anagram_single(atable::AnagramTable, vec::LetterCountVec, wildcards::Int)
+    if wildcards == 0
+        return anagram_single(atable, vec)
+    end
+    nletters = sum(vec) + wildcards
+    if nletters + 1 > length(atable.offsets)
+        error("Too many letters")
+    end
+    mincol = atable.offsets[nletters]
+    maxcol = atable.offsets[nletters + 1] - 1
+    results = (String, Float32)[]
+    tempvec = zeros(Int8, 26)
+    for col=mincol:maxcol
+        remain = wildcards
+        for row=26:-1:1
+            diff = vec[row] - atable.table[row, col]
+            if diff < 0
+                remain += diff
+                if remain < 0
+                    break
+                end
+            end
+        end
+        if remain == 0
+            alph = atable.labels[col]
+            append!(results, atable.alpha_map[alph])
+        end
+    end
+    sort!(results, by=x -> -x[2])
+    results
+end
+
 function anagram_double(atable::AnagramTable, vec::LetterCountVec, limit::Int=10000)
     results = (String, Float32)[]
     tempvec = zeros(Int8, 26)
     halflen = div(sum(vec) + 1, 2) + 1
     if halflen > length(atable.offsets)
         error("Too many letters")
+    end
+    for simple_result=anagram_single(atable, vec)
+        logprob1 = logprob(atable.wordlist, remove_spaces(simple_result))
+        push!(results, (simple_result, logprob1))
     end
     endcol = atable.offsets[halflen] - 1
     for col=1:endcol
@@ -539,9 +577,9 @@ function anagram_double(atable::AnagramTable, vec::LetterCountVec, limit::Int=10
             otherwords = anagram_single(atable, tempvec)
             if length(otherwords) > 0
                 for word1=thesewords
-                    logprob1 = logprob(atable.wordlist, word1)
+                    logprob1 = logprob(atable.wordlist, remove_spaces(word1))
                     for word2=otherwords
-                        logprob2 = logprob(atable.wordlist, word2)
+                        logprob2 = logprob(atable.wordlist, remove_spaces(word2))
                         phrase = "$word1 $word2"
                         push!(results, (phrase, logprob1 + logprob2))
                     end
@@ -554,6 +592,10 @@ function anagram_double(atable::AnagramTable, vec::LetterCountVec, limit::Int=10
     end
     sort!(results, by=x -> -x[2])
     results
+end
+
+function anagram(atable, text)
+    anagram_double(atable, letters_to_vec(uppercase(remove_spaces(text))))
 end
 
 function print(io::IO, at::AnagramTable)

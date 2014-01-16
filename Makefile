@@ -4,7 +4,7 @@ all: setup wordlists
 
 setup: env/bin/activate .julia-setup.log .python-setup.log
 
-.julia-setup.log: julia/setup.jl
+.julia-setup.log: julia/setup.jl env/bin/activate
 	julia julia/setup.jl > .julia-setup.log
 
 .python-setup.log: python/setup.py

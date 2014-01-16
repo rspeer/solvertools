@@ -6,16 +6,17 @@ using PyCall
 # we'd have to be explicit about the fact that we're extending them, not
 # replacing them. This is much more convenient.
 importall Base
+using DataFrames
 
 BASE_PATH = "."
 if haskey(ENV, "SOLVERTOOLS_BASE")
     BASE_PATH = ENV["SOLVERTOOLS_BASE"]
 end
+MIN_LOGPROB = -1000.
 
-# I split Wordlist into a separate file because it defines a new type, and types are really hard to reload interactively.
-#require(joinpath(BASE_PATH, "julia", "wordlists.jl"))
-require("wordlists.jl")
-using Wordlists
+# Types are really hard to reload interactively.
+require("custom_types.jl")
+using SolverToolsTypes
 
 # ## Letter operations
 # Some functions for working with the 26 capital English letters. If your letters
@@ -66,7 +67,7 @@ end
 
 # `roman_letters`: Remove accents, convert to uppercase, and keep only
 # the letters A-Z.
-function roman_letters(s::UTF8String)
+function roman_letters(s::String)
     if is_valid_ascii(s)
         decomposed = s
     else
@@ -75,13 +76,97 @@ function roman_letters(s::UTF8String)
     replace(decomposed, r"[^A-Z]", "")
 end
 
-function roman_letters_and_spaces(s::UTF8String)
+function roman_letters_and_spaces(s::String)
     if is_valid_ascii(s)
         decomposed = s
     else
         decomposed = unicodedata.normalize("NFKD", uppercase(s))
     end
     replace(decomposed, r"[^A-Z ]", "")
+end
+
+function remove_spaces(s::String)
+    replace(s, " ", "")
+end
+
+# ## Wordlists
+function load_wordframe(filename::String, filepath::String=BASE_PATH, T::Type=Int64)
+    path = joinpath(filepath, filename)
+    wordframe::DataFrame = readtable(
+        path, separator='\t', header=false,
+        nastrings=ASCIIString[], colnames=["word", "freq"],
+        coltypes={UTF8String, T}
+    )
+    wordframe
+end
+
+function load_wordlist(filename::String, filepath::String=BASE_PATH)
+    println("Loading wordlist: $filename")
+    wordframe = load_wordframe(filename, filepath, Int64)
+    build_wordlist(wordframe)
+end
+
+function build_wordlist(wordframe::DataFrame)
+    wordlist::Wordlist = Wordlist()
+    total = sum(wordframe[2])
+    for row=1:nrow(wordframe)
+        origword = wordframe[row, 1]
+        word = remove_spaces(origword)
+        if haskey(wordlist.wordmap, word)
+            continue
+        end
+        if word != origword
+            wordlist.canonical[word] = origword
+        end
+        
+        freq = wordframe[row, 2]
+        wordlist.wordmap[word] = log2(freq) - log2(total)
+
+        if row % 1000000 == 0
+            println("\tRead $row words")
+        end
+    end
+    println("\tStoring greppable string")
+    sorted = [remove_spaces(x) for x=wordframe[1]]
+    wordlist.sortstring = join(sorted, '\n')
+    wordlist
+end
+
+length(w::Wordlist) = length(w.wordmap)
+keys(w::Wordlist) = keys(w.wordmap)
+start(w::Wordlist) = start(w.wordmap)
+next(w::Wordlist, i) = next(w.wordmap, i)
+done(w::Wordlist, i) = done(w.wordmap, i)
+
+function print(io::IO, w::Wordlist)
+    len = length(w.wordmap)
+    (sample, state) = next(w, start(w))
+    print(io, "Wordmap with $len entries like $sample")
+end
+show(io::IO, w::Wordlist) = print(io, w)
+
+function getindex(wordlist::Wordlist, word)
+    if haskey(wordlist.wordmap, word)
+        wordlist.wordmap[word]
+    else
+        MIN_LOGPROB
+    end
+end
+
+function logprob(wordlist::Wordlist, word::String)
+    wordlist[word]
+end
+
+function haskey(wordlist::Wordlist, word::String)
+    haskey(wordlist.wordmap, word)
+end
+
+function canonicalize(wordlist::Wordlist, word::String)
+    if haskey(wordlist.canonical, word)
+        wordlist.canonical[word]
+    else
+        word
+    end
 end
 
 # ## Ciphers
@@ -285,7 +370,7 @@ metatron = interpret_pattern
 
 # ## Letter distribution statistics
 
-function letter_bigrams(s::UTF8String)
+function letter_bigrams(s::String)
     result = UTF8String[]
     i = 1
     lasti = endof(s)
@@ -331,3 +416,148 @@ function bigram_table(wordlist::Wordlist)
     end
     btable
 end
+
+# ## Anagrams
+# A LetterCountVec is a vector of 26 integers, representing the counts of
+# letters in a string. A LetterProportionVec is a vector of 26 floats,
+# representing their relative proportions.
+#
+# These objects also have 2-D matrix equivalents.
+typealias LetterCountVec Vector{Int8}
+typealias LetterCountMat Matrix{Int8}
+typealias LetterProportionVec Vector{Float32}
+typealias LetterProportionMat Matrix{Float32}
+
+letter_freqs = Float32[
+    0.08331452,  0.01920814,  0.04155464,  0.03997236,  0.11332581,
+    0.01456622,  0.02694035,  0.02517641,  0.08116646,  0.00305369,
+    0.00930784,  0.05399477,  0.02984008,  0.06982714,  0.06273243,
+    0.0287359 ,  0.00204801,  0.07181286,  0.07714659,  0.06561591,
+    0.03393991,  0.01232891,  0.01022719,  0.0037979 ,  0.01733258,
+    0.00303336
+]
+
+function proportional_vector(v::LetterCountVec)
+    float32(v / sum(v))::LetterProportionVec
+end
+
+function letters_to_vec(letters::String)
+    vec = zeros(Int8, 26)
+    for ch in letters
+        vec[letter_index(ch)] += 1
+    end
+    if any(vec .< 0)
+        error("too many letters")
+    end
+    vec::LetterCountVec
+end
+
+function alphagram(letters::String)
+    join(sort(collect(remove_spaces(letters))))
+end
+
+function alphagram(vec::LetterCountVec)
+    lets = Char[]
+    for i=1:26
+        for j=1:vec[i]
+            push!(lets, letter_unindex(i))
+        end
+    end
+    join(lets)
+end
+
+function anahash(vec::LetterProportionVec)
+    anomaly = vec - letter_freqs
+    indices = (1:26)[anomaly .> 0.0]
+    join(map(unindex, indices))
+end
+
+function anahash(letters::String)
+    anahash(to_proportion(letters_to_vec(letters)))
+end
+
+function build_anagram_table(wordlist)
+    alpha_map = Dict{String, Vector{String}}()
+    labels = String[]
+    table::LetterCountMat = zeros(Int8, 26, length(wordlist))
+    col = 0
+    wordorder = sort(collect(split(wordlist.sortstring, "\n")), by=length, alg=MergeSort)
+    offsets = Int[1]
+    for word=wordorder
+        alph = alphagram(word)
+        if haskey(alpha_map, alph)
+            if length(alpha_map[alph]) < 3
+                push!(alpha_map[alph], canonicalize(wordlist, word))
+            end
+        else
+            col += 1
+            table[:, col] = letters_to_vec(alph)
+            push!(labels, alph)
+            alpha_map[alph] = [canonicalize(wordlist, word)]
+
+            wordlen = length(alph)
+            if wordlen > length(offsets)
+                push!(offsets, col)
+                println("\tgenerating alphagrams of $wordlen letters")
+            end
+        end
+    end
+    AnagramTable(alpha_map, labels, table, offsets, wordlist)
+end
+
+function anagram_single(atable::AnagramTable, vec::LetterCountVec)
+    alph = alphagram(vec)
+    if haskey(atable.alpha_map, alph)
+        return atable.alpha_map[alph]
+    else
+        return []
+    end
+end
+
+function anagram_double(atable::AnagramTable, vec::LetterCountVec, limit::Int=10000)
+    results = (String, Float32)[]
+    tempvec = zeros(Int8, 26)
+    halflen = div(sum(vec) + 1, 2) + 1
+    if halflen > length(atable.offsets)
+        error("Too many letters")
+    end
+    endcol = atable.offsets[halflen] - 1
+    for col=1:endcol
+        ok = true
+        for row=26:-1:1
+            diff = vec[row] - atable.table[row, col]
+            if diff < 0
+                ok = false
+                break
+            else
+                tempvec[row] = diff
+            end
+        end
+        if ok
+            alph = atable.labels[col]
+            thesewords = atable.alpha_map[alph]
+            otherwords = anagram_single(atable, tempvec)
+            if length(otherwords) > 0
+                for word1=thesewords
+                    logprob1 = logprob(atable.wordlist, word1)
+                    for word2=otherwords
+                        logprob2 = logprob(atable.wordlist, word2)
+                        phrase = "$word1 $word2"
+                        push!(results, (phrase, logprob1 + logprob2))
+                    end
+                end
+            end
+            if length(results) > limit
+                break
+            end
+        end
+    end
+    sort!(results, by=x -> -x[2])
+    results
+end
+
+function print(io::IO, at::AnagramTable)
+    print(io, "AnagramTable with offsets ")
+    show(io, at.offsets)
+end
+show(io::IO, at::AnagramTable) = print(io, at)

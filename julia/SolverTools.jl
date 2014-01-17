@@ -154,7 +154,11 @@ function getindex(wordlist::Wordlist, word)
 end
 
 function logprob(wordlist::Wordlist, word::String)
-    wordlist[word]
+    if word == "~"  # a flag for impossible constraints
+        MIN_LOGPROB * 2
+    else
+        wordlist[word]
+    end
 end
 
 function haskey(wordlist::Wordlist, word::String)
@@ -316,13 +320,54 @@ function trim_bigrams(unigram_filename::String, bigram_filename::String, ratio::
 end
 
 # ## Regex operations
-function interpret_pattern(wordlist::Wordlist, pattern::String,
-                           limit::Int=20, beam::Int=3)
-    st = time()
+# `interpret_pattern` is like `interpret_text` for a regex.
+function interpret_pattern(wordlist::Wordlist, pattern::String)
+    best_partial_results = UTF8String[]
+    best_partial_logprob = Float64[]
+    
     if regextools.is_deterministic(pattern)
         return interpret_text(wordlist, pattern)
     end
+    # If this isn't a fixed-length regex, fall back on ordinary "grep",
+    # without assembling phrases.
+    minlen, maxlen = regextools.regex_len(pattern)
+    if minlen != maxlen
+        word = grep(wordlist, pattern, 1)
+        if length(word) > 0
+            return word
+        else
+            return "~"
+        end
+    end
+    regex_len::Int = maxlen
 
+    pieces = UTF8String[regextools.regex_index(pattern, i-1) for i=1:regex_len]
+    for right_edge=1:length(pieces)
+        best_match = [grep(wordlist, join(pieces[1:right_edge]), 1), "~"][1]
+        push!(best_partial_results, best_match)
+        push!(best_partial_logprob, logprob(wordlist, best_match))
+        
+        for left_edge=1:(right_edge - 1)
+            right_regex = join(pieces[(left_edge+1):right_edge])
+            right_match = [grep(wordlist, right_regex, 1), "~"][1]
+
+            left_logprob = best_partial_logprob[left_edge]
+            right_logprob = logprob(wordlist, right_match)
+            if left_logprob + right_logprob > best_partial_logprob[right_edge]
+                best_partial_logprob[right_edge] = left_logprob + right_logprob
+                best_partial_results[right_edge] = best_partial_results[left_edge] * " " * right_match
+            end
+        end
+    end
+    return best_partial_results[end], best_partial_logprob[end]
+end
+
+# `phrase_grep` returns multiple results like `grep`, but allows the string to
+# split into two pieces that match the wordlist separately.
+#
+# This probably isn't enough. Nutrimatic probably does this better.
+function phrase_grep(wordlist::Wordlist, pattern::String,
+                     limit::Int=20, beam::Int=3)
     # If this isn't a fixed-length regex, fall back on ordinary "grep",
     # without assembling phrases.
     minlen, maxlen = regextools.regex_len(pattern)
@@ -366,7 +411,7 @@ function interpret_pattern(wordlist::Wordlist, pattern::String,
     #println("interpret_pattern: $elapsed")
     eval_results[1:min(limit, length(eval_results))]
 end
-metatron = interpret_pattern
+metatron = phrase_grep
 
 # ## Letter distribution statistics
 

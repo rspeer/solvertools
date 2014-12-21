@@ -2,6 +2,9 @@ PYTHON=python3.3
 
 all: wordlists
 
+clean:
+	rm wordlists/*.txt
+
 wordlists: wordlists/enable.txt wordlists/twl06.txt \
 	wordlists/google-books.freq.txt \
 	wordlists/google-books-1grams.txt \
@@ -15,13 +18,13 @@ env/bin/activate: py-requirements.txt
 
 wordlists/google-books.freq.txt: wordlists/raw/google-books-1grams.txt\
 	wordlists/raw/google-books-2grams.txt
-	LC_ALL=C egrep -h "^[A-Z ]+," $^ | sort -nrk 2 -t "," > $@
+	LC_ALL=C egrep -h "^[A-Z' ]+,[0-9]" $^ | sort -nrk 2 -t "," > $@
 
 wordlists/google-books.txt: wordlists/google-books.freq.txt
 	LC_ALL=C sort $< > $@
 
 wordlists/google-books-1grams.txt: wordlists/raw/google-books-1grams.txt
-	LC_ALL=C egrep -h "^[A-Z]+," $^ | sort > $@
+	LC_ALL=C egrep -h "^[A-Z']+," $^ | sort > $@
 
 wordlists/google-books-1grams.freq.txt: wordlists/google-books-1grams.txt
 	sort -nrk 2 -t "," $< > $@

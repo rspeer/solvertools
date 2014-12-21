@@ -1,12 +1,12 @@
 #!/usr/bin/env python
-VERSION = "2014"
+VERSION = "2015.0"
 
-from setuptools import setup
+from setuptools import find_packages, setup
 
 setup(
     name="solvertools",
     version=VERSION,
-    py_modules=['regextools'],
+    packages=find_packages(),
     install_requires=[
     ],
 )

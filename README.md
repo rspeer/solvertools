@@ -1,12 +1,11 @@
 ## Prerequisites
 
-You need these packages installed system-wide:
+You need Python 3.3+, Make, and GNU tools such as 'grep' and 'sort'.
 
-- Python >= 3.3
-  - python-virtualenv
-- Julia >= 0.2
-- Standard GNU tools
+In a Python 3.3+ environment, run:
 
-Use your operating system's package manager to get them.
+    python setup.py develop
 
-Then run "make".
+To get the wordlists, run:
+
+    make

@@ -47,17 +47,17 @@ def module_path():
 PACKAGE_DIR = os.path.dirname(module_path())
 
 
-def get_datafile(path):
+def data_path(path):
     "Get a complete path for a file in the data directory."
     return _build_path([PACKAGE_DIR, 'data', path])
 
 
-def get_wordlist(path):
+def wordlist_path(path):
     "Get a complete path for a file in the wordlists directory."
     return _build_path([PACKAGE_DIR, 'wordlists', path])
 
 
-def get_db(path):
+def db_path(path):
     "Get a path for a SQLite database in the data/db directory."
     return _build_path([PACKAGE_DIR, 'data', 'db', path])
 
@@ -65,7 +65,7 @@ def get_db(path):
 # Simple functions for working with pickles.
 # For more awesome pickling, see the pickledir below and lib/persist.py.
 
-def get_picklefile(path):
+def pickle_path(path):
     "Get a complete path for a file in the data/pickle directory."
     return _build_path([PACKAGE_DIR, 'data', 'pickle', path])
 

@@ -8,6 +8,5 @@ setup(
     version=VERSION,
     packages=find_packages(),
     install_requires=[
-        'dataset'
     ],
 )

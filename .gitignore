@@ -1,5 +1,7 @@
 docs/*.html
+data/
 wordlists/*.txt
+wordlists/greppable/
 wordlists/raw/big/
 env/
 .ipynb_checkpoints

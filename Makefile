@@ -9,7 +9,9 @@ wordlists: wordlists/enable.txt wordlists/twl06.txt \
 	wordlists/google-books.freq.txt \
 	wordlists/google-books-1grams.txt \
 	wordlists/google-books-1grams.freq.txt \
-	wordlists/google-books.txt
+	wordlists/google-books.txt \
+	wordlists/wikipedia-en-titles.txt \
+	wordlists/npl-allwords.txt
 
 env/bin/activate: py-requirements.txt
 	test -d env || virtualenv --python=$(PYTHON) env
@@ -34,3 +36,11 @@ wordlists/enable.txt: wordlists/raw/enable.txt shell/freq1.sh
 
 wordlists/twl06.txt: wordlists/raw/twl06.txt shell/freq1.sh
 	tr a-z A-Z < $< | shell/freq1.sh > $@
+
+# this is silly, but it'll do until I come up with a better way to set this up
+wordlists/wikipedia-en-titles.txt: wordlists/raw/wikipedia-en-titles.txt
+	cp $< $@
+
+wordlists/npl-allwords.txt: wordlists/raw/npl_allwords2.txt
+	LC_ALL=C egrep -h "^[A-Za-z0-9' -]+$$" $< | tr a-z A-Z | shell/freq1.sh > $@
+

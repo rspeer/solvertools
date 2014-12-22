@@ -6,7 +6,7 @@ files.
 
 import os
 import sys
-import cPickle as pickle
+import pickle
 import unicodedata
 
 
@@ -52,7 +52,7 @@ def get_datafile(path):
     return _build_path([PACKAGE_DIR, 'data', path])
 
 
-def get_dictfile(path):
+def get_wordlist(path):
     "Get a complete path for a file in the wordlists directory."
     return _build_path([PACKAGE_DIR, 'wordlists', path])
 

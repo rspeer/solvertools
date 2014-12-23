@@ -1,11 +1,28 @@
 """
->>> wl = DBWordlist('combined')
->>> wl.text_logprob('rgbofreliquary')
-(-32.79859301811924, 'RGB OF RELIQUARY')
->>> wl.text_logprob('atzerodtorvolokheg')
-(-53.30558199136009, 'ATZERODT OR VOLOKH EG')
->>> wl.text_logprob('escapefromzyzzlvaria')
-(-20.227172138877677, 'ESCAPE FROM ZYZZLVARIA')
+"Cromulence" is how valid a sequence of letters is as a clue or a puzzle
+answer. It's measured in dB, with the reference point of 0 dB being the
+awkward meta-answer "OUI, PAREE'S GAY".
+
+>>> words.cromulence('mulugetawendimu')
+(20.81283388396978, 'MULUGETA WENDIMU')
+
+>>> words.cromulence('rgbofreliquary')
+(12.801189823550718, 'RGB OF RELIQUARY')
+
+>>> words.cromulence('atzerodtorvolokheg')
+(7.424762425298007, 'ATZERODT OR VOLOKH EG')
+
+>>> words.cromulence('turkmenhowayollary')   # wrong spacing
+(5.297392577036264, 'TURKMEN HOW A YOLLA RY')
+
+>>> words.cromulence('ottohidjanskey')
+(3.277474561428554, 'OTTO HID JANS KEY')
+
+>>> words.cromulence('ouipareesgay')
+(0.0, "OUI PAREE 'S GAY")
+
+>>> words.cromulence('yoryu')   # wrong spacing
+(-7.496185741874485, 'YOR YU')
 """
 from solvertools.util import db_path, data_path, wordlist_path
 import re
@@ -23,7 +40,8 @@ logger = logging.getLogger(__name__)
 # answer than "TURKMENHOWAYOLLARY" or "ATZERODT OR VOLOKH EG".)
 #
 # Puzzle answers with 
-NULL_HYPOTHESIS_ENTROPY = -3.9654
+NULL_HYPOTHESIS_ENTROPY = -3.6603643108893644
+DECIBELS_PER_NEPER = 20 / log(10)
 NONALPHA_RE = re.compile(r'[^a-z]')
 
 
@@ -150,8 +168,8 @@ class DBWordlist:
         if len(slug) == 0:
             return (0., '')
         logprob, found_text = self.text_logprob(slug)
-        entropy = logprob / len(slug)
-        cromulence = (entropy - NULL_HYPOTHESIS_ENTROPY) / log(2)
+        entropy = logprob / (len(slug) + 1)
+        cromulence = (entropy - NULL_HYPOTHESIS_ENTROPY) * DECIBELS_PER_NEPER
         return cromulence, found_text
 
     # Below this are building steps that should only need to be run once.

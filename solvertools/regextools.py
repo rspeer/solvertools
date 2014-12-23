@@ -30,20 +30,20 @@ def regex_sequence(strings):
     return unparse(pattern)
 
 
-def is_deterministic(string):
+def is_exact(string):
     """
     Indicates whether this is a plain string, with no special regex
     characters, so it will always match exactly.
 
-        >>> is_deterministic('foo')
+        >>> is_exact('foo')
         True
-        >>> is_deterministic('')
+        >>> is_exact('')
         True
-        >>> is_deterministic('a|b')
+        >>> is_exact('a|b')
         False
-        >>> is_deterministic('(foo)')
+        >>> is_exact('(foo)')
         False
-        >>> is_deterministic('ba[rz]')
+        >>> is_exact('ba[rz]')
         False
     """
     return not REGEX_RE.search(string)

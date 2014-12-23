@@ -3,34 +3,40 @@
 answer. It's measured in dB, with the reference point of 0 dB being the
 awkward meta-answer "OUI, PAREE'S GAY".
 
+Cromulence is rounded to an integer to avoid implying unreasonable
+precision, and to avoid confusion with log probability.
+
 >>> words.cromulence('mulugetawendimu')
-(20.81283388396978, 'MULUGETA WENDIMU')
+(21, 'MULUGETA WENDIMU')
 
 >>> words.cromulence('rgbofreliquary')
-(12.801189823550718, 'RGB OF RELIQUARY')
+(13, 'RGB OF RELIQUARY')
 
 >>> words.cromulence('atzerodtorvolokheg')
-(7.424762425298007, 'ATZERODT OR VOLOKH EG')
+(7, 'ATZERODT OR VOLOKH EG')
 
 >>> words.cromulence('turkmenhowayollary')   # wrong spacing
-(5.297392577036264, 'TURKMEN HOW A YOLLA RY')
+(5, 'TURKMEN HOW A YOLLA RY')
 
 >>> words.cromulence('ottohidjanskey')
-(3.277474561428554, 'OTTO HID JANS KEY')
+(3, 'OTTO HID JANS KEY')
 
 >>> words.cromulence('ouipareesgay')
-(0.0, "OUI PAREE 'S GAY")
+(0, "OUI PAREE 'S GAY")
 
->>> words.cromulence('yoryu')   # wrong spacing
-(-7.496185741874485, 'YOR YU')
+>>> words.cromulence('yoryu')                # wrong spacing
+(-7, 'YOR YU')
 """
 from solvertools.util import db_path, data_path, wordlist_path
-import re
-import logging
-import os
+from solvertools.regextools import is_exact, regex_len, regex_slice
 import sqlite3
+import re
+import os
+import mmap
 from collections import defaultdict
 from math import log, exp
+from itertools import islice
+import logging
 logger = logging.getLogger(__name__)
 
 
@@ -38,9 +44,7 @@ logger = logging.getLogger(__name__)
 # that is just barely an answer, for which we use the entropy of the meta
 # answer "OUI, PAREE'S GAY". (Our probability metric considers that a worse
 # answer than "TURKMENHOWAYOLLARY" or "ATZERODT OR VOLOKH EG".)
-#
-# Puzzle answers with 
-NULL_HYPOTHESIS_ENTROPY = -3.6603643108893644
+NULL_HYPOTHESIS_ENTROPY = -3.8203213525570447
 DECIBELS_PER_NEPER = 20 / log(10)
 NONALPHA_RE = re.compile(r'[^a-z]')
 
@@ -60,6 +64,14 @@ def alpha_slug(text):
     or apostrophes.
     """
     return NONALPHA_RE.sub('', text.lower())
+
+
+def unspaced_lower(text):
+    """
+    Remove spaces and apostrophes from text. This is a gentler form of
+    `alpha_slug` that preserves regex operators, for example.
+    """
+    return text.replace(' ', '').replace("'", '').lower()
 
 
 def read_wordlist(name):
@@ -119,7 +131,8 @@ class DBWordlist:
     def __init__(self, name):
         self.name = name
         self.db = wordlist_db_connection(name + '.wl.db')
-        self.word_cache = {}
+        self._word_cache = {}
+        self._grep_maps = {}
         self.logtotal = None
 
     def __contains__(self, word):
@@ -127,21 +140,22 @@ class DBWordlist:
         return self.lookup_slug(slug) is not None
 
     def lookup_slug(self, slug):
-        if slug in self.word_cache:
-            return self.word_cache[slug]
+        if slug in self._word_cache:
+            return self._word_cache[slug]
         c = self.db.cursor()
         c.execute("SELECT freq, text FROM words WHERE slug=?", (slug,))
         result = c.fetchone()
-        if result is None:
-            result = (1e-40, slug)
-        self.word_cache[slug] = result
+        self._word_cache[slug] = result
         return result
 
     def segment_logprob(self, slug):
         if self.logtotal is None:
             totalfreq, _ = self.lookup_slug('')
             self.logtotal = log(totalfreq)
-        freq, text = self.lookup_slug(slug)
+        found = self.lookup_slug(slug)
+        if found is None:
+            return None
+        freq, text = found
         logprob = log(freq) - self.logtotal
         return logprob, text
 
@@ -151,26 +165,114 @@ class DBWordlist:
         best_partial_results = ['']
         best_logprobs = [0.]
         for right_edge in range(1, n + 1):
-            rprob, rtext = self.segment_logprob(slug[:right_edge])
-            best_partial_results.append(rtext)
-            best_logprobs.append(rprob)
+            found = self.segment_logprob(slug[:right_edge])
+            if found:
+                rprob, rtext = found
+                best_partial_results.append(rtext)
+                best_logprobs.append(rprob)
+            else:
+                best_logprobs.append(-1000.)
+                best_partial_results.append(slug[:right_edge])
             for left_edge in range(1, right_edge):
                 lprob = best_logprobs[left_edge]
-                rprob, rtext = self.segment_logprob(slug[left_edge:right_edge])
-                if lprob + rprob > best_logprobs[right_edge]:
-                    best_logprobs[right_edge] = lprob + rprob
-                    ltext = best_partial_results[left_edge]
-                    best_partial_results[right_edge] = ltext + ' ' + rtext
+                found2 = self.segment_logprob(slug[left_edge:right_edge])
+                if found2:
+                    rprob, rtext = found2
+                    if lprob + rprob > best_logprobs[right_edge]:
+                        best_logprobs[right_edge] = lprob + rprob - log(2)
+                        ltext = best_partial_results[left_edge]
+                        best_partial_results[right_edge] = ltext + ' ' + rtext
         return best_logprobs[-1], best_partial_results[-1]
 
     def cromulence(self, text):
         slug = alpha_slug(text)
         if len(slug) == 0:
-            return (0., '')
+            return (0, '')
         logprob, found_text = self.text_logprob(slug)
         entropy = logprob / (len(slug) + 1)
-        cromulence = (entropy - NULL_HYPOTHESIS_ENTROPY) * DECIBELS_PER_NEPER
+        cromulence = round((entropy - NULL_HYPOTHESIS_ENTROPY) * DECIBELS_PER_NEPER)
         return cromulence, found_text
+
+    def grep(self, pattern, length=None):
+        pattern = unspaced_lower(pattern)
+        if is_exact(pattern):
+            if pattern in self:
+                yield self.segment_logprob(pattern)
+            return
+        if length:
+            minlen = maxlen = length
+        else:
+            minlen, maxlen = regex_len(pattern)
+        if minlen < 1:
+            minlen = 1
+        if maxlen > self.max_indexed_length:
+            maxlen = self.max_indexed_length
+
+        for cur_length in range(minlen, maxlen + 1):
+            if cur_length not in self._grep_maps:
+                mm = self._open_mmap(
+                    wordlist_path_from_name(
+                        'greppable/%s.%d' % (self.name, cur_length)
+                    )
+                )
+                self._grep_maps[cur_length] = mm
+            else:
+                mm = self._grep_maps[cur_length]
+            pbytes = pattern.encode('ascii')
+            pattern1 = b'^' + pbytes + b','
+            pattern2 = b'\n' + pbytes + b','
+            match = re.match(pattern1, mm)
+            if match:
+                found = mm[match.start():match.end() - 1].decode('ascii')
+                yield self.segment_logprob(found)
+            for match in re.finditer(pattern2, mm):
+                found = mm[match.start() + 1:match.end() - 1].decode('ascii')
+                yield self.segment_logprob(found)
+
+    def grep_one(self, pattern, length=None):
+        for result in self.grep(pattern, length):
+            return result
+
+    def search(self, pattern, count=10):
+        pattern = unspaced_lower(pattern)
+        if is_exact(pattern):
+            return [self.text_logprob(pattern)]
+        minlen, maxlen = regex_len(pattern)
+        if minlen != maxlen:
+            # If there are variable-length matches, the dynamic programming
+            # strategy won't work, so fall back on grepping for complete
+            # matches in the wordlist.
+            return list(self.grep(pattern))
+
+        best_partial_results = [[]]
+        for right_edge in range(1, maxlen + 1):
+            segment = regex_slice(pattern, 0, right_edge)
+            results_this_step = list(islice(self.grep(segment), count))
+
+            for left_edge in range(1, right_edge):
+                if best_partial_results[left_edge]:
+                    segment = regex_slice(pattern, left_edge, right_edge)
+                    found = list(islice(self.grep(segment), count))
+                    for lprob, ltext in best_partial_results[left_edge]:
+                        for rprob, rtext in found:
+                            results_this_step.append((
+                                lprob + rprob - log(2),
+                                ltext + ' ' + rtext
+                            ))
+            results_this_step.sort(reverse=True)
+            best_partial_results.append(results_this_step[:count])
+        return best_partial_results[-1]
+
+    def __getitem__(self, pattern):
+        return self.grep_one(pattern)
+
+    def __repr__(self):
+        return "DBWordlist(%r)" % self.name
+
+    def _open_mmap(self, path):
+        openfile = open(path, 'r+b')
+        mm = mmap.mmap(openfile.fileno(), 0, access=mmap.ACCESS_READ)
+        return mm
 
     # Below this are building steps that should only need to be run once.
     def build_db(self):
@@ -225,7 +327,7 @@ class DBWordlist:
             length: open(
                 wordlist_path_from_name(
                     'greppable/%s.%d' % (self.name, length)
-                ), 'w', encoding='utf-8'
+                ), 'w', encoding='ascii'
             )
             for length in range(1, self.max_indexed_length + 1)
         }

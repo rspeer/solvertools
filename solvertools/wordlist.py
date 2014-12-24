@@ -4,16 +4,17 @@ answer. It's measured in dB, with the reference point of 0 dB being the
 awkward meta-answer "OUI, PAREE'S GAY".
 
 Cromulence is rounded to an integer to avoid implying unreasonable
-precision, and to avoid confusion with log probability.
+precision, and to avoid confusion with log probability. The possible
+values seem to range from -33 to 28.
 
 >>> words.cromulence('mulugetawendimu')
-(21, 'MULUGETA WENDIMU')
+(22, 'MULUGETA WENDIMU')
 
 >>> words.cromulence('rgbofreliquary')
 (13, 'RGB OF RELIQUARY')
 
 >>> words.cromulence('atzerodtorvolokheg')
-(7, 'ATZERODT OR VOLOKH EG')
+(8, 'ATZERODT OR VOLOKH EG')
 
 >>> words.cromulence('turkmenhowayollary')   # wrong spacing
 (5, 'TURKMEN HOW A YOLLA RY')
@@ -28,7 +29,9 @@ precision, and to avoid confusion with log probability.
 (-7, 'YOR YU')
 """
 from solvertools.util import db_path, data_path, wordlist_path
+from solvertools.normalize import alpha_slug, unspaced_lower
 from solvertools.regextools import is_exact, regex_len, regex_slice
+from solvertools.letters import alphagram, anahash, consonantcy
 import sqlite3
 import re
 import os
@@ -46,7 +49,6 @@ logger = logging.getLogger(__name__)
 # answer than "TURKMENHOWAYOLLARY" or "ATZERODT OR VOLOKH EG".)
 NULL_HYPOTHESIS_ENTROPY = -3.8203213525570447
 DECIBELS_PER_NEPER = 20 / log(10)
-NONALPHA_RE = re.compile(r'[^a-z]')
 
 
 def wordlist_path_from_name(name):
@@ -56,22 +58,6 @@ def wordlist_path_from_name(name):
 def wordlist_db_connection(filename):
     os.makedirs(db_path(''), exist_ok=True)
     return sqlite3.connect(db_path(filename))
-
-
-def alpha_slug(text):
-    """
-    Return a text as a sequence of letters. No spaces, digits, hyphens,
-    or apostrophes.
-    """
-    return NONALPHA_RE.sub('', text.lower())
-
-
-def unspaced_lower(text):
-    """
-    Remove spaces and apostrophes from text. This is a gentler form of
-    `alpha_slug` that preserves regex operators, for example.
-    """
-    return text.replace(' ', '').replace("'", '').lower()
 
 
 def read_wordlist(name):
@@ -118,13 +104,20 @@ class DBWordlist:
     schema = [
         """
         CREATE TABLE words (
-        slug TEXT,
-        freq INT,
-        text TEXT
+            slug TEXT,
+            freq INT,
+            text TEXT
         )
         """,
         "CREATE UNIQUE INDEX words_slug ON words (slug)",
         "CREATE INDEX words_freq ON words (freq)"
+    ]
+    wordplay_schema = [
+        "CREATE TABLE wordplay (slug TEXT, alphagram TEXT, anahash TEXT, consonantcy TEXT)",
+        "CREATE UNIQUE INDEX wordplay_slug on words (slug)",
+        "CREATE INDEX wordplay_alphagram on wordplay (alphagram)",
+        "CREATE INDEX wordplay_anahash on wordplay (anahash)",
+        "CREATE INDEX wordplay_consonantcy on wordplay (consonantcy)",
     ]
     max_indexed_length = 25
 
@@ -263,6 +256,46 @@ class DBWordlist:
             best_partial_results.append(results_this_step[:count])
         return best_partial_results[-1]
 
+    def _iter_query(self, query, params=()):
+        c = self.db.cursor()
+        c.execute(query, params)
+        while True:
+            got = c.fetchmany()
+            if not got:
+                return
+            for row in got:
+                yield row
+
+    def iter_all_by_freq(self):
+        """
+        Read the database and iterate through it in descending order
+        by frequency.
+        """
+        return self._iter_query(
+            "SELECT slug, freq, text FROM words ORDER BY freq DESC"
+        )
+
+    def find_by_alphagram(self, alphagram):
+        return self._iter_query(
+            "SELECT w.* from wordplay wp, words w "
+            "WHERE wp.slug=w.slug and wp.alphagram=?",
+            (alphagram,)
+        )
+
+    def find_by_anahash(self, anahash):
+        return self._iter_query(
+            "SELECT w.* from wordplay wp, words w "
+            "WHERE wp.slug=w.slug and wp.anahash=?",
+            (anahash,)
+        )
+
+    def find_by_consonantcy(self, consonants):
+        return self._iter_query(
+            "SELECT w.* from wordplay wp, words w "
+            "WHERE wp.slug=w.slug and wp.consonantcy=?",
+            (consonants,)
+        )
+
     def __getitem__(self, pattern):
         return self.grep_one(pattern)
 
@@ -293,7 +326,7 @@ class DBWordlist:
                 )
                 total += freq
                 if i % 10000 == 0:
-                    print(text, freq)
+                    print("\t%s,%s" % (text, freq))
 
             # Use the empty string to record the total
             print("Total: %d" % total)
@@ -302,21 +335,23 @@ class DBWordlist:
                 (total,)
             )
 
-    def iter_all_by_freq(self):
-        """
-        Read the database and iterate through it in descending order
-        by frequency.
-        """
-        c = self.db.cursor()
-        c.execute(
-            "SELECT slug, freq, text FROM words ORDER BY freq DESC"
-        )
-        while True:
-            got = c.fetchmany()
-            if not got:
-                return
-            for row in got:
-                yield row
+    def build_wordplay(self):
+        self.db.execute("DROP TABLE IF EXISTS wordplay")
+        for statement in self.wordplay_schema:
+            self.db.execute(statement)
+
+        with self.db:
+            for i, slug, freq, text in read_wordlist(self.name):
+                alpha = alphagram(slug)
+                ana = anahash(slug)
+                cons = consonantcy(slug)
+                self.db.execute(
+                    "INSERT INTO wordplay (slug, alphagram, anahash, consonantcy) "
+                    "VALUES (?, ?, ?, ?)",
+                    (slug, alpha, ana, cons)
+                )
+                if i % 10000 == 0:
+                    print("\t%s" % (text))
 
     def write_greppable_lists(self):
         """
@@ -346,7 +381,7 @@ class DBWordlist:
 
 # TODO: make these actual commands that can be run from the Makefile when
 # appropriate
-def build_all():
+def build_combined_list():
     combine_wordlists([
         ('google-books', 1),
         ('enable', 250),
@@ -354,9 +389,12 @@ def build_all():
         ('wikipedia-en-titles', 800),
     ], 'combined')
 
-def build_more():
-    DBWordlist('combined').build_db()
-    #DBWordlist('combined').write_greppable_lists()
+
+def build_extras(name):
+    dbw = DBWordlist(name)
+    dbw.build_db()
+    #dbw.write_greppable_lists()
+    dbw.build_wordplay()
 
 
 words = DBWordlist('combined')

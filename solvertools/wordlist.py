@@ -15,7 +15,7 @@ a recall of 86%, in a test against distractors made of random letters selected
 from an English letter distribution.
 
     >>> WORDS.cromulence('mulugetawendimu')
-    (25, 'MULUGETA WENDIMU')
+    (24, 'MULUGETA WENDIMU')
 
     >>> WORDS.cromulence('rgbofreliquary')
     (15, 'RGB OF RELIQUARY')
@@ -45,8 +45,8 @@ that this metric finds are:
     0   OUI PAREE'S GAY
     0   OCEAN E HQ
     0   UV
+    0   HIFIS
     1   BABE WYNERY
-    1   HIFIS
     1   IO
     2   ALT F FOUR
     2   ACQUIL
@@ -58,7 +58,6 @@ And the most interesting cromulent fake answers, made of random letters, that
 came out in several runs of testing were:
 
     17  ALCUNI
-    15  MELEE
     15  CLANKS
     12  LEVERDSEE
     9   DTANDISCODE
@@ -92,7 +91,7 @@ logger = logging.getLogger(__name__)
 # that is just barely an answer, for which we use the entropy of the meta
 # answer "OUI, PAREE'S GAY". (Our probability metric considers that a worse
 # answer than "TURKMENHOWAYOLLARY" or "ATZERODT OR VOLOKH EG".)
-NULL_HYPOTHESIS_ENTROPY = -4.192589876439323
+NULL_HYPOTHESIS_ENTROPY = -4.192795083133463
 DECIBELS_PER_NEPER = 20 / log(10)
 
 
@@ -232,6 +231,11 @@ class DBWordlist:
         cromulence = round((entropy - NULL_HYPOTHESIS_ENTROPY) * DECIBELS_PER_NEPER)
         return cromulence, found_text
 
+    def logprob_to_cromulence(self, logprob, length):
+        entropy = logprob / (length + 1)
+        cromulence = round((entropy - NULL_HYPOTHESIS_ENTROPY) * DECIBELS_PER_NEPER)
+        return cromulence        
+
     def grep(self, pattern, length=None):
         pattern = unspaced_lower(pattern)
         if is_exact(pattern):
@@ -330,11 +334,11 @@ class DBWordlist:
             "SELECT slug, freq, text FROM words ORDER BY freq/(length(slug) + 1) DESC"
         )
 
-    def find_sub_alphagrams(self, alpha):
-        if len(alpha) < 2:
+    def find_sub_alphagrams(self, alpha, wildcard=False):
+        if len(alpha) + wildcard < 2:
             return
         abytes = alphabytes(alpha)
-        max_length = min(len(alpha) - 2, self.max_indexed_length)
+        max_length = min(len(alpha) + wildcard - 2, self.max_indexed_length)
         if max_length < 2:
             max_length = 2
         if max_length not in self._alpha_maps:
@@ -346,7 +350,10 @@ class DBWordlist:
             self._alpha_maps[max_length] = mm
         else:
             mm = self._alpha_maps[max_length]
-        pattern = b'\n[' + abytes + b']+\n'
+        if wildcard:
+            pattern = b'\n[' + abytes + b']*.[' + abytes + b']*\n'
+        else:
+            pattern = b'\n[' + abytes + b']+\n'
         for match in re.finditer(pattern, mm):
             found = mm[match.start() + 1:match.end() - 1]
             yield found

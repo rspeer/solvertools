@@ -54,12 +54,12 @@ def data_path(path):
 
 def wordlist_path(path):
     "Get a complete path for a file in the wordlists directory."
-    return _build_path([PACKAGE_DIR, 'wordlists', path])
+    return _build_path([PACKAGE_DIR, 'data', 'wordlists', path])
 
 
 def corpus_path(path):
     "Get a complete path for a file in the corpora directory."
-    return _build_path([PACKAGE_DIR, 'corpora', path])
+    return _build_path([PACKAGE_DIR, 'data', 'corpora', path])
 
 
 def db_path(path):

@@ -321,9 +321,22 @@ class DBWordlist:
             "SELECT slug, freq, text FROM words ORDER BY freq DESC"
         )
 
+    def iter_all_by_cromulence(self):
+        """
+        Read the database and iterate through it in descending order
+        by cromulence.
+        """
+        return self._iter_query(
+            "SELECT slug, freq, text FROM words ORDER BY freq/(length(slug) + 1) DESC"
+        )
+
     def find_sub_alphagrams(self, alpha):
+        if len(alpha) < 2:
+            return
         abytes = alphabytes(alpha)
         max_length = min(len(alpha) - 2, self.max_indexed_length)
+        if max_length < 2:
+            max_length = 2
         if max_length not in self._alpha_maps:
             mm = self._open_mmap(
                 wordlist_path_from_name(
@@ -433,7 +446,7 @@ class DBWordlist:
             for length in range(1, self.max_indexed_length + 1)
         }
         i = 0
-        for slug, freq, text in self.iter_all_by_freq():
+        for slug, freq, text in self.iter_all_by_cromulence():
             length = len(slug)
             if 1 <= length <= self.max_indexed_length:
                 out = length_files[length]
@@ -458,7 +471,7 @@ class DBWordlist:
         used = set()
         for slug, freq, text in self.iter_all_by_freq():
             if len(slug) >= 2:
-                maxlen = min(len(slug) * 2, self.max_indexed_length)
+                maxlen = self.max_indexed_length
                 abytes = alphabytes(slug)
                 if abytes not in used:
                     for length in range(len(slug), maxlen + 1):

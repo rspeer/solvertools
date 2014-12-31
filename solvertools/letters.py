@@ -57,10 +57,12 @@ def alphabytes_to_alphagram(abytes):
 
 def alpha_diff(a1, a2):
     adiff = ''
+    if set(a2) - set(a1):
+        raise ValueError("%r is not a subsequence of %r" % (a2, a1))
     for letter in sorted(set(a1)):
         diff = (a1.count(letter) - a2.count(letter))
         if diff < 0:
-            raise ValueError("%r is not a subsequence of %r" % (a1, a2))
+            raise ValueError("%r is not a subsequence of %r" % (a2, a1))
         adiff += letter * diff
     return adiff
 

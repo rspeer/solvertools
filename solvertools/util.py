@@ -57,6 +57,11 @@ def wordlist_path(path):
     return _build_path([PACKAGE_DIR, 'wordlists', path])
 
 
+def corpus_path(path):
+    "Get a complete path for a file in the corpora directory."
+    return _build_path([PACKAGE_DIR, 'corpora', path])
+
+
 def db_path(path):
     "Get a path for a SQLite database in the data/db directory."
     return _build_path([PACKAGE_DIR, 'data', 'db', path])

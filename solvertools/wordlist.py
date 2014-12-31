@@ -1,42 +1,87 @@
 """
+Cromulence
+==========
+
 "Cromulence" is how valid a sequence of letters is as a clue or a puzzle
 answer. It's measured in dB, with the reference point of 0 dB being the
 awkward meta-answer "OUI, PAREE'S GAY".
 
 Cromulence is rounded to an integer to avoid implying unreasonable
 precision, and to avoid confusion with log probability. The possible
-values seem to range from -33 to 28.
+values seem to range from -42 to 32.
 
->>> words.cromulence('mulugetawendimu')
-(22, 'MULUGETA WENDIMU')
+Positive cromulences correspond to real answers, with a precision of 99% and
+a recall of 86%, in a test against distractors made of random letters selected
+from an English letter distribution.
 
->>> words.cromulence('rgbofreliquary')
-(13, 'RGB OF RELIQUARY')
+    >>> WORDS.cromulence('mulugetawendimu')
+    (25, 'MULUGETA WENDIMU')
 
->>> words.cromulence('atzerodtorvolokheg')
-(8, 'ATZERODT OR VOLOKH EG')
+    >>> WORDS.cromulence('rgbofreliquary')
+    (15, 'RGB OF RELIQUARY')
 
->>> words.cromulence('turkmenhowayollary')   # wrong spacing
-(5, 'TURKMEN HOW A YOLLA RY')
+    >>> WORDS.cromulence('atzerodtorvolokheg')
+    (9, 'ATZERODT OR VOLOKH EG')
 
->>> words.cromulence('ottohidjanskey')
-(3, 'OTTO HID JANS KEY')
+    >>> WORDS.cromulence('turkmenhowayollary')   # wrong spacing
+    (7, 'TURKMEN HOW AYO LLARY')
 
->>> words.cromulence('ouipareesgay')
-(0, "OUI PAREE 'S GAY")
+    >>> WORDS.cromulence('ottohidjanskey')
+    (4, 'OTTO HID JANS KEY')
 
->>> words.cromulence('yoryu')                # wrong spacing
-(-7, 'YOR YU')
+    >>> WORDS.cromulence('ouipareesgay')
+    (0, "OUI PAREE 'S GAY")
+
+    >>> WORDS.cromulence('yoryu')                # wrong spacing
+    (-6, 'YOR YU')
+
+In case you're wondering, the least-cromulent Mystery Hunt clues and answers
+that this metric finds are:
+
+    -6  YORYU
+    -2  N
+    -2  E
+    -1  HUERFANA
+    0   OUI PAREE'S GAY
+    0   OCEAN E HQ
+    0   UV
+    1   BABE WYNERY
+    1   HIFIS
+    1   IO
+    2   ALT F FOUR
+    2   ACQUIL
+    4   OTTO HID JAN'S KEY
+    5   PREW
+    5   DIN
+
+And the most interesting cromulent fake answers, made of random letters, that
+came out in several runs of testing were:
+
+    17  ALCUNI
+    15  MELEE
+    15  CLANKS
+    12  LEVERDSEE
+    9   DTANDISCODE
+    9   ITOO
+    9   DRCELL
+    9   LEERECHO
+    7   EBOLASOSIT
+    7   RAGEMYLADSOK
+
+Those would be good inputs for a game of Metapuzzle Spaghetti.
 """
-from solvertools.util import db_path, data_path, wordlist_path
+from solvertools.util import db_path, data_path, wordlist_path, corpus_path
 from solvertools.normalize import alpha_slug, unspaced_lower
 from solvertools.regextools import is_exact, regex_len, regex_slice
-from solvertools.letters import alphagram, anahash, consonantcy
+from solvertools.letters import (
+    alphagram, alphabytes_to_alphagram, anahash, consonantcy, alphabytes, random_letters
+)
 import sqlite3
 import re
 import os
 import mmap
-from collections import defaultdict
+from collections import defaultdict, Counter
+from pprint import pprint
 from math import log, exp
 from itertools import islice
 import logging
@@ -47,7 +92,7 @@ logger = logging.getLogger(__name__)
 # that is just barely an answer, for which we use the entropy of the meta
 # answer "OUI, PAREE'S GAY". (Our probability metric considers that a worse
 # answer than "TURKMENHOWAYOLLARY" or "ATZERODT OR VOLOKH EG".)
-NULL_HYPOTHESIS_ENTROPY = -3.8203213525570447
+NULL_HYPOTHESIS_ENTROPY = -4.192589876439323
 DECIBELS_PER_NEPER = 20 / log(10)
 
 
@@ -126,6 +171,7 @@ class DBWordlist:
         self.db = wordlist_db_connection(name + '.wl.db')
         self._word_cache = {}
         self._grep_maps = {}
+        self._alpha_maps = {}
         self.logtotal = None
 
     def __contains__(self, word):
@@ -172,7 +218,7 @@ class DBWordlist:
                 if found2:
                     rprob, rtext = found2
                     if lprob + rprob > best_logprobs[right_edge]:
-                        best_logprobs[right_edge] = lprob + rprob - log(2)
+                        best_logprobs[right_edge] = lprob + rprob - log(10)
                         ltext = best_partial_results[left_edge]
                         best_partial_results[right_edge] = ltext + ' ' + rtext
         return best_logprobs[-1], best_partial_results[-1]
@@ -235,7 +281,7 @@ class DBWordlist:
             # If there are variable-length matches, the dynamic programming
             # strategy won't work, so fall back on grepping for complete
             # matches in the wordlist.
-            return list(self.grep(pattern))
+            return list(islice(self.grep(pattern), count))
 
         best_partial_results = [[]]
         for right_edge in range(1, maxlen + 1):
@@ -275,24 +321,44 @@ class DBWordlist:
             "SELECT slug, freq, text FROM words ORDER BY freq DESC"
         )
 
+    def find_sub_alphagrams(self, alpha):
+        abytes = alphabytes(alpha)
+        max_length = min(len(alpha) - 2, self.max_indexed_length)
+        if max_length not in self._alpha_maps:
+            mm = self._open_mmap(
+                wordlist_path_from_name(
+                    'alphabytes/%s.%d' % (self.name, max_length)
+                )
+            )
+            self._alpha_maps[max_length] = mm
+        else:
+            mm = self._alpha_maps[max_length]
+        pattern = b'\n[' + abytes + b']+\n'
+        for match in re.finditer(pattern, mm):
+            found = mm[match.start() + 1:match.end() - 1]
+            yield found
+
     def find_by_alphagram(self, alphagram):
         return self._iter_query(
             "SELECT w.* from wordplay wp, words w "
-            "WHERE wp.slug=w.slug and wp.alphagram=?",
+            "WHERE wp.slug=w.slug and wp.alphagram=? "
+            "ORDER BY freq DESC",
             (alphagram,)
         )
 
     def find_by_anahash(self, anahash):
         return self._iter_query(
             "SELECT w.* from wordplay wp, words w "
-            "WHERE wp.slug=w.slug and wp.anahash=?",
+            "WHERE wp.slug=w.slug and wp.anahash=? "
+            "ORDER BY freq DESC",
             (anahash,)
         )
 
     def find_by_consonantcy(self, consonants):
         return self._iter_query(
             "SELECT w.* from wordplay wp, words w "
-            "WHERE wp.slug=w.slug and wp.consonantcy=?",
+            "WHERE wp.slug=w.slug and wp.consonantcy=? "
+            "ORDER BY freq DESC",
             (consonants,)
         )
 
@@ -378,23 +444,86 @@ class DBWordlist:
         for file in length_files.values():
             file.close()
 
+    def write_alphabytes(self):
+        os.makedirs(wordlist_path('alphabytes'), exist_ok=True)
+        length_files = {
+            length: open(
+                wordlist_path_from_name(
+                    'alphabytes/%s.%d' % (self.name, length)
+                ), 'wb'
+            )
+            for length in range(2, self.max_indexed_length + 1)
+        }
+        i = 0
+        used = set()
+        for slug, freq, text in self.iter_all_by_freq():
+            if len(slug) >= 2:
+                maxlen = min(len(slug) * 2, self.max_indexed_length)
+                abytes = alphabytes(slug)
+                if abytes not in used:
+                    for length in range(len(slug), maxlen + 1):
+                        out = length_files[length]
+                        out.write(b'\n')
+                        out.write(abytes)
+                        used.add(abytes)
+        for file in length_files.values():
+            file.write(b'\n')
+            file.close()
 
-# TODO: make these actual commands that can be run from the Makefile when
-# appropriate
-def build_combined_list():
-    combine_wordlists([
-        ('google-books', 1),
-        ('enable', 250),
-        ('twl06', 250),
-        ('wikipedia-en-titles', 800),
-    ], 'combined')
+    def test_cromulence(self):
+        real_answers = []
+        for year in ['2004', '2005', '2006', '2007', '2008', '2011', '2012']:
+            with open(corpus_path('answers/mystery%s.txt' % year)) as file:
+                for line in file:
+                    line = line.strip()
+                    if line:
+                        answer, _typ = line.rsplit(',', 1)
+                        real_answers.append(answer)
+        fake_answers = [
+            random_letters(len(real)) for real in real_answers
+        ]
+        results = []
+        for ans in real_answers:
+            cromulence, spaced = self.cromulence(ans)
+            logprob, _ = self.text_logprob(ans)
+            if cromulence >= 1:
+                results.append((cromulence, logprob, spaced, 'true positive'))
+            else:
+                results.append((cromulence, logprob, spaced, 'false negative'))
+        for ans in fake_answers:
+            cromulence, spaced = self.cromulence(ans)
+            logprob, _ = self.text_logprob(ans)
+            if cromulence >= 1:
+                results.append((cromulence, logprob, spaced, 'false positive'))
+            else:
+                results.append((cromulence, logprob, spaced, 'true negative'))
+
+        results.sort(reverse=True)
+        counts = Counter([item[-1] for item in results])
+        precision = counts['true positive'] / (counts['true positive'] + counts['false positive'])
+        recall = counts['true positive'] / (counts['true positive'] + counts['false negative'])
+        f_score = 2/(1/precision + 1/recall)
+        for cromulence, logprob, spaced, category in results:
+            print("%d\t%2.2f\t%s\t%s" % (cromulence, logprob, category, spaced))
+        print("Precision: %2.2f%%" % (precision * 100))
+        print("Recall: %2.2f%%" % (recall * 100))
+        return f_score
+
+    def show_best_results(self, results):
+        results.sort(reverse=True)
+        print("Log prob.\tCromulence\tText")
+        for logprob, text in results[:20]:
+            cromulence, spaced = self.cromulence(text)
+            print("%4.4f\t%d\t\t%s" % (logprob, cromulence, spaced))
+        return results[0]
 
 
 def build_extras(name):
     dbw = DBWordlist(name)
     dbw.build_db()
-    #dbw.write_greppable_lists()
+    dbw.write_greppable_lists()
+    dbw.write_alphabytes()
     dbw.build_wordplay()
 
 
-words = DBWordlist('combined')
+WORDS = DBWordlist('combined')

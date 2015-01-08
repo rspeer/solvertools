@@ -8,6 +8,23 @@ import numpy as np
 letters_to_try = 'etaoinshrdlucympbgfvxwkjzq'
 
 
+def interleave(iteriter):
+    seen_iters = []
+    for newiter in iteriter:
+        seen_iters.append(newiter)
+        for i in reversed(range(len(seen_iters))):
+            try:
+                yield next(seen_iters[i])
+            except StopIteration:
+                del seen_iters[i]
+    while seen_iters:
+        for i in reversed(range(len(seen_iters))):
+            try:
+                yield next(seen_iters[i])
+            except StopIteration:
+                del seen_iters[i]        
+
+
 def eval_anagrams(gen, wordlist, count):
     results = []
     used = set()
@@ -27,75 +44,76 @@ def eval_anagrams(gen, wordlist, count):
 
 def anagram_single(text, wildcards=0, wordlist=WORDS, count=10):
     return eval_anagrams(
-        _anagram_single(alphagram(alpha_slug(text)), wildcards, wordlist, count),
+        _anagram_single(alphagram(alpha_slug(text)), wildcards, wordlist),
         wordlist, count
     )
 
 
-def _anagram_single(alpha, wildcards=0, wordlist=WORDS, count=100):
+def _anagram_single(alpha, wildcards, wordlist):
     if wildcards == 0:
-        for slug, freq, text in itertools.islice(wordlist.find_by_alphagram(alpha), count):
-            yield slug
+        yield from wordlist.find_by_alphagram_raw(alpha)
     else:
         for seq in itertools.combinations(letters_to_try, wildcards):
             newalpha = alphagram(alpha + ''.join(seq))
-            for slug, freq, text in itertools.islice(wordlist.find_by_alphagram(newalpha), count):
-                yield slug            
+            yield from wordlist.find_by_alphagram_raw(newalpha)
 
 
-def anagram_double(text, wildcards=0, wordlist=WORDS, max_results=100, depth=1):
+def anagram_double(text, wildcards=0, wordlist=WORDS, max_results=100):
     return eval_anagrams(
-        _anagram_double(alphagram(alpha_slug(text)), wildcards, wordlist, depth),
+        _anagram_double(alphagram(alpha_slug(text)), wildcards, wordlist),
         wordlist, max_results
     )
 
 
-def _anagram_double(alpha, wildcards=0, wordlist=WORDS, depth=1):
-    yield from _anagram_single(alpha, wildcards, wordlist)
+def _anagram_double(alpha, wildcards, wordlist):
+    return interleave([
+        _anagram_single(alpha, wildcards, wordlist),
+        _anagram_double_2(alpha, wildcards, wordlist)
+    ])
+
+def _anagram_double_2(alpha, wildcards, wordlist):
     for sub in wordlist.find_sub_alphagrams(alpha, wildcard=(wildcards > 0)):
         alpha1 = alphabytes_to_alphagram(sub)
         alpha2, wildused = alpha_diff(alpha, alpha1)
         wildcards_remaining = wildcards - wildused
         if wildcards_remaining >= 0:
-            for slug2 in _anagram_single(alpha2, wildcards_remaining, wordlist, depth):
-                for slug1 in _anagram_single(alpha1, 0, wordlist, depth):
+            for slug2 in _anagram_single(alpha2, wildcards_remaining, wordlist):
+                for slug1 in _anagram_single(alpha1, 0, wordlist):
                     yield slug1 + slug2
 
 
-def anagram_triple(text, wildcards=0, wordlist=WORDS, max_results=100, depth=3):
+def anagram_triple(text, wildcards=0, wordlist=WORDS, max_results=100):
     return eval_anagrams(
-        _anagram_triple(alphagram(alpha_slug(text)), wildcards, wordlist, max_results, depth),
+        _anagram_triple(alphagram(alpha_slug(text)), wildcards, wordlist),
         wordlist, max_results
     )
 
 
-def _anagram_triple(alpha, wildcards=0, wordlist=WORDS, max_results=100, depth=3):
-    yield from itertools.islice(_anagram_double(alpha, wildcards, wordlist, 1), max_results // 2)
-    for ahash in subsequences(anahash(alpha), 3):
-        for slug1, freq1, text1 in wordlist.find_by_anahash(ahash):
+def _anagram_triple(alpha, wildcards, wordlist):
+    return interleave(_anagram_triple_pieces(alpha, wildcards, wordlist))
+
+
+def _anagram_triple_pieces(alpha, wildcards, wordlist):
+    yield _anagram_double(alpha, wildcards, wordlist)
+    for ahash in subsequences(anahash(alpha), 4):
+        for slug1 in wordlist.find_by_anahash_raw(ahash):
             alpha1 = alphagram(slug1)
             alpha2, wildused = alpha_diff(alpha, alpha1)
             wildcards_remaining = wildcards - wildused
             if wildcards_remaining >= 0:
-                inner_func = _anagram_double
-                inner_depth = min(depth, max_results)
-                inner_max = inner_depth
-                if len(alpha2) >= 25:
-                    inner_func = _anagram_triple
-                    inner_depth = 1
-                print(alpha2, inner_max)
-                gen = itertools.islice(
-                    inner_func(alpha2, wildcards_remaining, wordlist, inner_depth),
-                    inner_max
-                )
-                for slug2 in gen:
-                    yield slug1 + slug2
+                yield _anagram_triple_piece(slug1, alpha2, wildcards_remaining, wordlist)
+
+
+def _anagram_triple_piece(slug1, alpha, wildcards, wordlist):
+    for slug2 in _anagram_triple(alpha, wildcards, wordlist):
+        yield slug1 + slug2
 
 
 def subsequences(seq, depth=None):
     if depth is None:
         depth = len(seq) - 1
-    for seq_len in reversed(range(len(seq) - depth, len(seq) + 1)):
+    min_len = max(len(seq) - depth, 1)
+    for seq_len in reversed(range(min_len, len(seq) + 1)):
         for combo in itertools.combinations(seq, seq_len):
             yield ''.join(combo)
 

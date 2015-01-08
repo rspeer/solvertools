@@ -316,6 +316,16 @@ class DBWordlist:
             for row in got:
                 yield row
 
+    def _iter_singletons(self, query, params=()):
+        c = self.db.cursor()
+        c.execute(query, params)
+        while True:
+            got = c.fetchmany()
+            if not got:
+                return
+            for row in got:
+                yield row[0]
+
     def iter_all_by_freq(self):
         """
         Read the database and iterate through it in descending order
@@ -366,9 +376,17 @@ class DBWordlist:
             (alphagram,)
         )
 
-    def find_by_anahash(self, anahash):
-        return self._iter_query(
-            "SELECT w.* from wordplay wp, words w "
+    def find_by_alphagram_raw(self, alphagram):
+        return self._iter_singletons(
+            "SELECT w.slug from wordplay wp, words w "
+            "WHERE wp.slug=w.slug and wp.alphagram=? "
+            "ORDER BY freq DESC",
+            (alphagram,)
+        )
+
+    def find_by_anahash_raw(self, anahash):
+        return self._iter_singletons(
+            "SELECT w.slug from wordplay wp, words w "
             "WHERE wp.slug=w.slug and wp.anahash=? "
             "ORDER BY freq DESC",
             (anahash,)

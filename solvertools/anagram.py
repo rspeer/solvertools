@@ -35,7 +35,7 @@ def eval_anagrams(gen, wordlist, count):
             print("%4.4f\t%s" % (logprob, text))
             cromulence = wordlist.logprob_to_cromulence(logprob, len(slug))
             results.append((cromulence, logprob, text))
-            if len(results) >= count * 2:
+            if len(results) >= count * 5:
                 break
             used.add(textblob)
     results.sort()
@@ -50,6 +50,13 @@ def anagram_single(text, wildcards=0, wordlist=WORDS, count=10):
 
 
 def _anagram_single(alpha, wildcards, wordlist):
+    if len(alpha) == 0:
+        # don't make anything out of *just* wildcards
+        return
+    if len(alpha) == 1 and wildcards == 0:
+        # short circuit
+        yield alpha
+        return
     if wildcards == 0:
         yield from wordlist.find_by_alphagram_raw(alpha)
     else:
@@ -90,6 +97,13 @@ def anagram_triple(text, wildcards=0, wordlist=WORDS, max_results=100):
 
 
 def _anagram_triple(alpha, wildcards, wordlist):
+    return interleave([
+        _anagram_double(alpha, wildcards, wordlist),
+        _anagram_triple_2(alpha, wildcards, wordlist)
+    ])
+
+
+def _anagram_triple_2(alpha, wildcards, wordlist):
     return interleave(_anagram_triple_pieces(alpha, wildcards, wordlist))
 
 

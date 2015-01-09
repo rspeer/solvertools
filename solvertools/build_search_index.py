@@ -1,5 +1,5 @@
 from solvertools.normalize import alpha_slug
-from solvertools.util import data_path
+from solvertools.util import data_path, corpus_path
 from whoosh.fields import Schema, ID, TEXT, KEYWORD, NUMERIC
 from whoosh.analysis import StemmingAnalyzer
 from whoosh.index import create_in
@@ -31,6 +31,17 @@ def init_search_index():
     os.makedirs(data_path('search'), exist_ok=True)
     ix = create_in(data_path('search'), schema)
     writer = ix.writer(procs=4)
+
+    for line in open(corpus_path('crossword_clues.txt'), encoding='utf-8'):
+        text, defn = line.rstrip().split('\t')
+        slug = alpha_slug(text)
+        print(text, defn)
+        writer.add_document(
+            slug=slug,
+            text=text,
+            definition=defn,
+            length=len(slug)
+        )
 
     synsets = wordnet.all_synsets()
     for syn in synsets:

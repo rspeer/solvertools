@@ -1,10 +1,13 @@
 PYTHON=python3
+SEARCH_DIR=data/search
 WORDLIST_DIR=data/wordlists
+CORPUS_DIR=data/corpora
 
 all: wordlists
 
 clean:
 	rm $(WORDLIST_DIR)/*.txt
+	rm -r $(SEARCH_DIR)
 
 WORDLISTS = $(WORDLIST_DIR)/enable.txt $(WORDLIST_DIR)/twl06.txt \
 	$(WORDLIST_DIR)/google-books.freq.txt \
@@ -48,3 +51,5 @@ $(WORDLIST_DIR)/npl-allwords.txt: $(WORDLIST_DIR)/raw/npl_allwords2.txt
 $(WORDLIST_DIR)/combined.txt: $(WORDLISTS) scripts/build_combined.py
 	$(PYTHON) scripts/build_combined.py
 
+$(SEARCH_DIR)/_MAIN_1.toc: scripts/build_search_index.py corpus_dir/crossword_clues.txt
+	$(PYTHON) scripts/build_search_index.py

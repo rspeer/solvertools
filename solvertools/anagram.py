@@ -87,12 +87,12 @@ def adjusted_anagram_cost(item):
     """
     used, letters, wildcards, index = item
     if wildcards >= 0:
-        return anagram_cost(letters) / (wildcards + 1) * (index + 1)
+        return anagram_cost(letters) / (wildcards + 1) * (index + 100)
     else:
         raise ValueError
 
 def _anagram_double_2(alpha, wildcards, wordlist):
-    if len(alpha) >= 15:
+    if len(alpha) >= 25:
         return
     sub_anas = [
         (sub, adiff, wildcards - wildcards_used, index)
@@ -117,18 +117,23 @@ def anagrams(text, wildcards=0, wordlist=WORDS, max_results=100):
 
 
 def _anagram_recursive(alpha, wildcards, wordlist):
-    return interleave([
-        _anagram_double(alpha, wildcards, wordlist),
-        _anagram_recursive_2(alpha, wildcards, wordlist)
-    ])
+    if len(alpha) <= 15:
+        return _anagram_double(alpha, wildcards, wordlist)
+    else:
+        return interleave([
+            _anagram_double(alpha, wildcards, wordlist),
+            _anagram_recursive_2(alpha, wildcards, wordlist)
+        ])
 
 
 def _anagram_recursive_2(alpha, wildcards, wordlist):
-    return interleave(_anagram_recursive_pieces(alpha, wildcards, wordlist))
+    return interleave([
+        _anagram_double(alpha, wildcards, wordlist),
+        interleave(_anagram_recursive_pieces(alpha, wildcards, wordlist))
+    ])
 
 
 def _anagram_recursive_pieces(alpha, wildcards, wordlist):
-    yield _anagram_double(alpha, wildcards, wordlist)
     for ahash in subsequences(anahash(alpha), 4):
         yield interleave(_anagram_recursive_piece_1(alpha, wildcards, wordlist, ahash))
 

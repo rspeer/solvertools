@@ -120,10 +120,7 @@ def _anagram_recursive(alpha, wildcards, wordlist):
     if len(alpha) <= 15:
         return _anagram_double(alpha, wildcards, wordlist)
     else:
-        return interleave([
-            _anagram_double(alpha, wildcards, wordlist),
-            _anagram_recursive_2(alpha, wildcards, wordlist)
-        ])
+        return _anagram_recursive_2(alpha, wildcards, wordlist)
 
 
 def _anagram_recursive_2(alpha, wildcards, wordlist):

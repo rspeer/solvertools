@@ -78,7 +78,7 @@ def anagram_double(text, wildcards=0, wordlist=WORDS, max_results=100):
 def _anagram_double(alpha, wildcards, wordlist):
     return interleave([
         _anagram_single(alpha, wildcards, wordlist),
-        _anagram_double_2(alpha, wildcards, wordlist)
+        interleave(_anagram_double_2(alpha, wildcards, wordlist))
     ])
 
 def adjusted_anagram_cost(item):
@@ -90,6 +90,7 @@ def adjusted_anagram_cost(item):
         return anagram_cost(letters) / (wildcards + 1) * (index + 100)
     else:
         raise ValueError
+
 
 def _anagram_double_2(alpha, wildcards, wordlist):
     if len(alpha) >= 25:
@@ -104,9 +105,13 @@ def _anagram_double_2(alpha, wildcards, wordlist):
     sub_anas.sort(key=adjusted_anagram_cost)
     for abytes, alpha2, wildcards_remaining, index in sub_anas:
         alpha1 = alphabytes_to_alphagram(abytes)
-        for slug2 in _anagram_single(alpha2, wildcards_remaining, wordlist):
-            for slug1 in _anagram_single(alpha1, 0, wordlist):
-                yield slug1 + slug2
+        for slug1 in _anagram_single(alpha1, 0, wordlist):
+            yield _anagram_double_piece(slug1, alpha2, wildcards_remaining, wordlist)
+
+
+def _anagram_double_piece(slug1, alpha2, wildcards_remaining, wordlist):
+    for slug2 in _anagram_single(alpha2, wildcards_remaining, wordlist):
+        yield slug1 + slug2
 
 
 def anagrams(text, wildcards=0, wordlist=WORDS, max_results=100):
@@ -117,7 +122,7 @@ def anagrams(text, wildcards=0, wordlist=WORDS, max_results=100):
 
 
 def _anagram_recursive(alpha, wildcards, wordlist):
-    if len(alpha) <= 15:
+    if len(alpha) <= 10:
         return _anagram_double(alpha, wildcards, wordlist)
     else:
         return _anagram_recursive_2(alpha, wildcards, wordlist)

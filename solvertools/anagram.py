@@ -1,3 +1,9 @@
+"""
+This anagrammer is pretty cool.
+
+It can probably still be improved, possibly by actually using priority
+queues with a search strategy instead of all these iterator shenanigans.
+"""
 from solvertools.wordlist import WORDS
 from solvertools.letters import (
     alphagram, alphabytes, alphabytes_to_alphagram, anagram_diff, anahash,
@@ -71,6 +77,9 @@ def eval_anagrams(gen, wordlist, count):
 
 
 def anagram_single(text, wildcards=0, wordlist=WORDS, count=10):
+    """
+    Search for anagrams that appear directly in the wordlist.
+    """
     return eval_anagrams(
         _anagram_single(alphagram(alpha_slug(text)), wildcards, wordlist),
         wordlist, count
@@ -93,7 +102,23 @@ def _anagram_single(alpha, wildcards, wordlist):
             yield from wordlist.find_by_alphagram_raw(newalpha)
 
 
+def adjusted_anagram_cost(item):
+    """
+    Sorts the sub-anagrams we should try by their likeliness to yield good
+    anagrams.
+    """
+    used, letters, wildcards, index = item
+    if wildcards >= 0:
+        return anagram_cost(letters) / (wildcards + 1) * (index + 1)
+    else:
+        raise ValueError
+
+
 def anagram_double(text, wildcards=0, wordlist=WORDS, max_results=100):
+    """
+    Search for anagrams that can be made of two words or phrases from the
+    wordlist.
+    """
     return eval_anagrams(
         _anagram_double(alphagram(alpha_slug(text)), wildcards, wordlist),
         wordlist, max_results
@@ -102,17 +127,6 @@ def anagram_double(text, wildcards=0, wordlist=WORDS, max_results=100):
 
 def _anagram_double(alpha, wildcards, wordlist):
     return interleave(_anagram_double_2(alpha, wildcards, wordlist))
-
-
-def adjusted_anagram_cost(item):
-    """
-    Sorts the sub-anagrams we should try by their likeliness to yield
-    """
-    used, letters, wildcards, index = item
-    if wildcards >= 0:
-        return anagram_cost(letters) / (wildcards + 1) * (index + 100)
-    else:
-        raise ValueError
 
 
 def _anagram_double_2(alpha, wildcards, wordlist):
@@ -139,6 +153,10 @@ def _anagram_double_piece(slug1, alpha2, wildcards_remaining, wordlist):
 
 
 def anagrams(text, wildcards=0, wordlist=WORDS, max_results=100):
+    """
+    Search for anagrams that are made of an arbitrary number of pieces from the
+    wordlist.
+    """
     return eval_anagrams(
         _anagram_recursive(alphagram(alpha_slug(text)), wildcards, wordlist),
         wordlist, max_results

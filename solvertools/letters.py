@@ -55,7 +55,7 @@ def alphabytes_to_alphagram(abytes):
     return ''.join(letters)
 
 
-def alpha_diff(a1, a2):
+def anagram_diff(a1, a2):
     adiff = ''
     wildcards_used = 0
     for letter in set(a2) - set(a1):
@@ -68,6 +68,28 @@ def alpha_diff(a1, a2):
         else:
             adiff += letter * diff
     return adiff, wildcards_used
+
+
+def symmetric_alpha_diff(a1, a2):
+    diff1 = ''
+    diff2 = ''
+    for letter in set(a2) - set(a1):
+        diff = a2.count(letter) - a1.count(letter)
+        diff2 += letter * diff
+    for letter in sorted(set(a1)):
+        diff = (a1.count(letter) - a2.count(letter))
+        if diff < 0:
+            diff2 += letter * diff
+        else:
+            diff1 += letter * diff
+    return diff1, diff2
+
+
+def exact_alpha_diff(full, part):
+    diff1, diff2 = symmetric_alpha_diff(full, part)
+    if diff2:
+        raise ValueError("Letters were left over: %s" % diff2)
+    return diff1
 
 
 def anahash(slug):

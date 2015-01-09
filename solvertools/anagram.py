@@ -1,5 +1,5 @@
 from solvertools.wordlist import WORDS
-from solvertools.letters import alphagram, alphabytes, alphabytes_to_alphagram, alpha_diff, anahash
+from solvertools.letters import alphagram, alphabytes, alphabytes_to_alphagram, anagram_diff, anahash
 from solvertools.normalize import alpha_slug
 import itertools
 import numpy as np
@@ -35,11 +35,11 @@ def eval_anagrams(gen, wordlist, count):
             print("%4.4f\t%s" % (logprob, text))
             cromulence = wordlist.logprob_to_cromulence(logprob, len(slug))
             results.append((cromulence, logprob, text))
-            if len(results) >= count * 5:
+            if len(results) >= count * 10:
                 break
             used.add(textblob)
     results.sort()
-    return results[-count:]
+    return [(cromulence, text) for (cromulence, logprob, text) in results[-count:]]
 
 
 def anagram_single(text, wildcards=0, wordlist=WORDS, count=10):
@@ -79,9 +79,11 @@ def _anagram_double(alpha, wildcards, wordlist):
     ])
 
 def _anagram_double_2(alpha, wildcards, wordlist):
-    for sub in wordlist.find_sub_alphagrams(alpha, wildcard=(wildcards > 0)):
+    sub_anas = list(wordlist.find_sub_alphagrams(alpha, wildcard=(wildcards > 0)))
+    sub_anas.sort(key=len, reverse=True)
+    for sub in sub_anas:
         alpha1 = alphabytes_to_alphagram(sub)
-        alpha2, wildused = alpha_diff(alpha, alpha1)
+        alpha2, wildused = anagram_diff(alpha, alpha1)
         wildcards_remaining = wildcards - wildused
         if wildcards_remaining >= 0:
             for slug2 in _anagram_single(alpha2, wildcards_remaining, wordlist):
@@ -89,37 +91,37 @@ def _anagram_double_2(alpha, wildcards, wordlist):
                     yield slug1 + slug2
 
 
-def anagram_triple(text, wildcards=0, wordlist=WORDS, max_results=100):
+def anagrams(text, wildcards=0, wordlist=WORDS, max_results=100):
     return eval_anagrams(
-        _anagram_triple(alphagram(alpha_slug(text)), wildcards, wordlist),
+        _anagram_recursive(alphagram(alpha_slug(text)), wildcards, wordlist),
         wordlist, max_results
     )
 
 
-def _anagram_triple(alpha, wildcards, wordlist):
+def _anagram_recursive(alpha, wildcards, wordlist):
     return interleave([
         _anagram_double(alpha, wildcards, wordlist),
-        _anagram_triple_2(alpha, wildcards, wordlist)
+        _anagram_recursive_2(alpha, wildcards, wordlist)
     ])
 
 
-def _anagram_triple_2(alpha, wildcards, wordlist):
-    return interleave(_anagram_triple_pieces(alpha, wildcards, wordlist))
+def _anagram_recursive_2(alpha, wildcards, wordlist):
+    return interleave(_anagram_recursive_pieces(alpha, wildcards, wordlist))
 
 
-def _anagram_triple_pieces(alpha, wildcards, wordlist):
+def _anagram_recursive_pieces(alpha, wildcards, wordlist):
     yield _anagram_double(alpha, wildcards, wordlist)
     for ahash in subsequences(anahash(alpha), 4):
         for slug1 in wordlist.find_by_anahash_raw(ahash):
             alpha1 = alphagram(slug1)
-            alpha2, wildused = alpha_diff(alpha, alpha1)
+            alpha2, wildused = anagram_diff(alpha, alpha1)
             wildcards_remaining = wildcards - wildused
             if wildcards_remaining >= 0:
-                yield _anagram_triple_piece(slug1, alpha2, wildcards_remaining, wordlist)
+                yield _anagram_recursive_piece(slug1, alpha2, wildcards_remaining, wordlist)
 
 
-def _anagram_triple_piece(slug1, alpha, wildcards, wordlist):
-    for slug2 in _anagram_triple(alpha, wildcards, wordlist):
+def _anagram_recursive_piece(slug1, alpha, wildcards, wordlist):
+    for slug2 in _anagram_recursive(alpha, wildcards, wordlist):
         yield slug1 + slug2
 
 
@@ -130,5 +132,4 @@ def subsequences(seq, depth=None):
     for seq_len in reversed(range(min_len, len(seq) + 1)):
         for combo in itertools.combinations(seq, seq_len):
             yield ''.join(combo)
-
 

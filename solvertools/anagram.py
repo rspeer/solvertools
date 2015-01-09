@@ -1,5 +1,8 @@
 from solvertools.wordlist import WORDS
-from solvertools.letters import alphagram, alphabytes, alphabytes_to_alphagram, anagram_diff, anahash
+from solvertools.letters import (
+    alphagram, alphabytes, alphabytes_to_alphagram, anagram_diff, anahash,
+    anagram_cost
+)
 from solvertools.normalize import alpha_slug
 import itertools
 import numpy as np
@@ -35,7 +38,7 @@ def eval_anagrams(gen, wordlist, count):
             print("%4.4f\t%s" % (logprob, text))
             cromulence = wordlist.logprob_to_cromulence(logprob, len(slug))
             results.append((cromulence, logprob, text))
-            if len(results) >= count * 10:
+            if len(results) >= count * 5:
                 break
             used.add(textblob)
     results.sort()
@@ -78,17 +81,32 @@ def _anagram_double(alpha, wildcards, wordlist):
         _anagram_double_2(alpha, wildcards, wordlist)
     ])
 
+def adjusted_anagram_cost(item):
+    """
+    Sorts the sub-anagrams we should try by their likeliness to yield
+    """
+    used, letters, wildcards, index = item
+    if wildcards >= 0:
+        return anagram_cost(letters) / (wildcards + 1) * (index + 1)
+    else:
+        raise ValueError
+
 def _anagram_double_2(alpha, wildcards, wordlist):
-    sub_anas = list(wordlist.find_sub_alphagrams(alpha, wildcard=(wildcards > 0)))
-    sub_anas.sort(key=len, reverse=True)
-    for sub in sub_anas:
-        alpha1 = alphabytes_to_alphagram(sub)
-        alpha2, wildused = anagram_diff(alpha, alpha1)
-        wildcards_remaining = wildcards - wildused
-        if wildcards_remaining >= 0:
-            for slug2 in _anagram_single(alpha2, wildcards_remaining, wordlist):
-                for slug1 in _anagram_single(alpha1, 0, wordlist):
-                    yield slug1 + slug2
+    if len(alpha) >= 15:
+        return
+    sub_anas = [
+        (sub, adiff, wildcards - wildcards_used, index)
+        for index, sub in enumerate(wordlist.find_sub_alphagrams(alpha, wildcard=(wildcards > 0)))
+        for adiff, wildcards_used in [anagram_diff(alpha, alphabytes_to_alphagram(sub))]
+        if wildcards >= wildcards_used
+    ]
+
+    sub_anas.sort(key=adjusted_anagram_cost)
+    for abytes, alpha2, wildcards_remaining, index in sub_anas:
+        alpha1 = alphabytes_to_alphagram(abytes)
+        for slug2 in _anagram_single(alpha2, wildcards_remaining, wordlist):
+            for slug1 in _anagram_single(alpha1, 0, wordlist):
+                yield slug1 + slug2
 
 
 def anagrams(text, wildcards=0, wordlist=WORDS, max_results=100):
@@ -112,15 +130,24 @@ def _anagram_recursive_2(alpha, wildcards, wordlist):
 def _anagram_recursive_pieces(alpha, wildcards, wordlist):
     yield _anagram_double(alpha, wildcards, wordlist)
     for ahash in subsequences(anahash(alpha), 4):
-        for slug1 in wordlist.find_by_anahash_raw(ahash):
-            alpha1 = alphagram(slug1)
-            alpha2, wildused = anagram_diff(alpha, alpha1)
-            wildcards_remaining = wildcards - wildused
-            if wildcards_remaining >= 0:
-                yield _anagram_recursive_piece(slug1, alpha2, wildcards_remaining, wordlist)
+        yield interleave(_anagram_recursive_piece_1(alpha, wildcards, wordlist, ahash))
 
 
-def _anagram_recursive_piece(slug1, alpha, wildcards, wordlist):
+def _anagram_recursive_piece_1(alpha, wildcards, wordlist, ahash):
+    sub_anas = [
+        (sub, adiff, wildcards - wildcards_used, index)
+        for index, sub in enumerate(wordlist.find_by_anahash_raw(ahash))
+        for adiff, wildcards_used in [anagram_diff(alpha, alphagram(sub))]
+        if wildcards >= wildcards_used
+    ]
+    sub_anas.sort(key=adjusted_anagram_cost)
+
+    for slug1, alpha2, wildcards_remaining, index in sub_anas:
+        alpha1 = alphagram(slug1)
+        yield _anagram_recursive_piece_2(slug1, alpha2, wildcards_remaining, wordlist)
+
+
+def _anagram_recursive_piece_2(slug1, alpha, wildcards, wordlist):
     for slug2 in _anagram_recursive(alpha, wildcards, wordlist):
         yield slug1 + slug2
 

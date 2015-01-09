@@ -101,6 +101,28 @@ def anahash(slug):
     return bytes(list(codes)).decode('ascii')
 
 
+def anagram_cost(letters):
+    """
+    Return a value that's probably larger for sets of letters that are
+    harder to anagram.
+
+    I came up with this formula in the original version of anagram.js. Much
+    like most of anagram.js, I can't entirely explain why it is the way it
+    is.
+
+    The 'discrepancy' of a set of letters is a vector indicating how far
+    it is from the average proportions of a set of letters. These values
+    are raised to the fourth power and summed to form one factor of this
+    cost formula. The other factor is the number of letters.
+    """
+    if letters == '':
+        return 0
+    n_letters = len(letters)
+    vec = to_proportion(letters_to_vec(letters))
+    discrepancy = (1 - vec / letter_freqs)
+    return np.sqrt((discrepancy ** 2).sum()) * n_letters
+
+
 VOWELS_RE = re.compile('[aeiouy]')
 def consonantcy(slug):
     return VOWELS_RE.sub('', slug)

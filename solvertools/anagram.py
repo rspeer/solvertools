@@ -12,6 +12,20 @@ letters_to_try = 'etaoinshrdlucympbgfvxwkjzq'
 
 
 def interleave(iteriter):
+    """
+    Okay, suppose you've got an unbounded iterator of unbounded iterators,
+    and you want to make an iterator that will get to *all* the items in all
+    the iterators eventually.
+
+    If you're familiar with how to prove that the rational numbers are
+    countable, you'll be familiar with how to do this. We basically make a
+    grid of iterators and walk down the reversed diagonals, skipping over
+    iterators that have actually ended.
+
+    Even though iterators of anagrams are actually finite, this works as a
+    way of searching through them breadth-first, instead of getting stuck
+    depth-first on bad anagrams.
+    """
     seen_iters = []
     for newiter in iteriter:
         seen_iters.append(newiter)
@@ -29,6 +43,17 @@ def interleave(iteriter):
 
 
 def eval_anagrams(gen, wordlist, count):
+    """
+    The final step in anagramming. Given a generator of anagrams, `gen`,
+    extract their readable text with spaces, get a reasonable number of
+    results that aren't just shuffling the words of other results, and
+    sort them by their cromulence (see wordlist.py).
+
+    The results are printed as they are encountered, and at the end, the top
+    `count` are returned from worst to best. The advantage of worst-to-best
+    order is that, at an interactive prompt, the best anagrams will land at
+    the bottom of the screen, and you can scroll up to see the worst ones.
+    """
     results = []
     used = set()
     for slug in gen:
@@ -76,10 +101,8 @@ def anagram_double(text, wildcards=0, wordlist=WORDS, max_results=100):
 
 
 def _anagram_double(alpha, wildcards, wordlist):
-    return interleave([
-        _anagram_single(alpha, wildcards, wordlist),
-        interleave(_anagram_double_2(alpha, wildcards, wordlist))
-    ])
+    return interleave(_anagram_double_2(alpha, wildcards, wordlist))
+
 
 def adjusted_anagram_cost(item):
     """
@@ -93,6 +116,7 @@ def adjusted_anagram_cost(item):
 
 
 def _anagram_double_2(alpha, wildcards, wordlist):
+    yield _anagram_single(alpha, wildcards, wordlist)
     if len(alpha) >= 25:
         return
     sub_anas = [

@@ -565,3 +565,4 @@ def build_extras(name):
 
 
 WORDS = DBWordlist('combined')
+SCRAB = DBWordlist('scrab')

@@ -57,5 +57,5 @@ $(WORDLIST_DIR)/npl-allwords.txt: $(WORDLIST_DIR)/raw/npl_allwords2.txt
 $(WORDLIST_DIR)/combined.txt: $(WORDLISTS) scripts/build_combined.py
 	$(PYTHON) scripts/build_combined.py
 
-$(SEARCH_DIR)/_MAIN_1.toc: scripts/build_search_index.py corpus_dir/crossword_clues.txt
+$(SEARCH_DIR)/_MAIN_1.toc: scripts/build_search_index.py $(CORPUS_DIR)/crossword_clues.txt
 	$(PYTHON) scripts/build_search_index.py

@@ -8,7 +8,7 @@ INDEX = None
 QUERY_PARSER = None
 
 
-def search(query, pattern=None, length=None, num=20):
+def search(pattern=None, clue=None, length=None, num=20):
     global INDEX, QUERY_PARSER
     if pattern is not None:
         pattern = pattern.lstrip('^').rstrip('$').lower()
@@ -23,7 +23,7 @@ def search(query, pattern=None, length=None, num=20):
 
     matches = []
     with INDEX.searcher() as searcher:
-        results = searcher.search(QUERY_PARSER.parse(query), limit=None)
+        results = searcher.search(QUERY_PARSER.parse(clue), limit=None)
         seen = set()
         for result in results:
             text = result['text']

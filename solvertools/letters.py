@@ -1,5 +1,5 @@
 import numpy as np
-from solvertools.normalize import alpha_slug
+from solvertools.normalize import slugify
 import re
 import random
 ASCII_a = 97

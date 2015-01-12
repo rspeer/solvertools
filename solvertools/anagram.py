@@ -9,7 +9,7 @@ from solvertools.letters import (
     alphagram, alphabytes, alphabytes_to_alphagram, anagram_diff, anahash,
     anagram_cost
 )
-from solvertools.normalize import alpha_slug
+from solvertools.normalize import slugify
 import itertools
 import numpy as np
 
@@ -48,7 +48,7 @@ def interleave(iteriter):
                 del seen_iters[i]        
 
 
-def eval_anagrams(gen, wordlist, count):
+def eval_anagrams(gen, wordlist, count, quiet=False):
     """
     The final step in anagramming. Given a generator of anagrams, `gen`,
     extract their readable text with spaces, get a reasonable number of
@@ -66,7 +66,8 @@ def eval_anagrams(gen, wordlist, count):
         logprob, text = wordlist.text_logprob(slug)
         textblob = ''.join(sorted(text.split(' ')))
         if textblob not in used:
-            print("%4.4f\t%s" % (logprob, text))
+            if not quiet:
+                print("%4.4f\t%s" % (logprob, text))
             cromulence = wordlist.logprob_to_cromulence(logprob, len(slug))
             results.append((cromulence, logprob, text))
             if len(results) >= count * 5:
@@ -76,13 +77,13 @@ def eval_anagrams(gen, wordlist, count):
     return [(cromulence, text) for (cromulence, logprob, text) in results[-count:]]
 
 
-def anagram_single(text, wildcards=0, wordlist=WORDS, count=10):
+def anagram_single(text, wildcards=0, wordlist=WORDS, count=10, quiet=True):
     """
     Search for anagrams that appear directly in the wordlist.
     """
     return eval_anagrams(
-        _anagram_single(alphagram(alpha_slug(text)), wildcards, wordlist),
-        wordlist, count
+        _anagram_single(alphagram(slugify(text)), wildcards, wordlist),
+        wordlist, count, quiet=quiet
     )
 
 
@@ -120,7 +121,7 @@ def anagram_double(text, wildcards=0, wordlist=WORDS, max_results=100):
     wordlist.
     """
     return eval_anagrams(
-        _anagram_double(alphagram(alpha_slug(text)), wildcards, wordlist),
+        _anagram_double(alphagram(slugify(text)), wildcards, wordlist),
         wordlist, max_results
     )
 
@@ -158,7 +159,7 @@ def anagrams(text, wildcards=0, wordlist=WORDS, max_results=100):
     wordlist.
     """
     return eval_anagrams(
-        _anagram_recursive(alphagram(alpha_slug(text)), wildcards, wordlist),
+        _anagram_recursive(alphagram(slugify(text)), wildcards, wordlist),
         wordlist, max_results
     )
 

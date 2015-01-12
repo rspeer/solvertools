@@ -1,4 +1,4 @@
-from solvertools.normalize import alpha_slug
+from solvertools.normalize import slugify
 from solvertools.util import data_path
 from whoosh.index import open_dir
 from whoosh import qparser
@@ -27,7 +27,7 @@ def search(query, pattern=None, length=None, num=20):
         seen = set()
         for result in results:
             text = result['text']
-            slug = alpha_slug(text)
+            slug = slugify(text)
             if slug not in seen:
                 if length is None or length == len(slug):
                     if pattern is None or pattern.match(slug):

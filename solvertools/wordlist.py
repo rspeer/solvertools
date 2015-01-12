@@ -1,9 +1,59 @@
 """
+Wordlists
+=========
+In solvertools, a wordlist is designed to store a set of words and their
+relative frequencies, and to optimize various operations for finding words.
+
+This is slightly different from the traditional sort of wordlist, which
+merely makes a binary decision about whether something "is a word" or not.
+In fact, in order to not miss potential answers, the main wordlist we use
+has a long tail of dubious words.
+
+The important thing is to rank words by their frequency, and to use that
+frequency information appropriately. Our frequency information comes from
+Google Books, and for any word that we didn't get from Google Books, we
+fake it.
+
+The data for wordlists are stored in various files that can be loaded
+very quickly, such as SQLite databases and mmapped piles of bytes.
+
+This module defines two wordlists as globals:
+
+- WORDS, the large, combined wordlist. Its data comes from Google Books,
+  WordNet, titles and redirects on Wikipedia, the NPL "allwords" list,
+  and two Scrabble dictionaries, ENABLE2K and TWL06 (OWL2).
+
+- SCRAB, a list of words that "have the Scrabble nature". Many wordlist
+  features don't work on this list, because it is a binary decision.
+  The frequency only indicates the number of Scrabble lists the word
+  is found in, out of three: ENABLE2K, TWL06, and Collins April 2007
+  (a successor to SOWPODS, although not the most up-to-date one).
+
+We'll use WORDS for the examples here, because it's the best suited for
+them.
+
+
+Words, phrases, and slugs
+=========================
+When we refer to a 'word' here, it could actually be a phrase of multiple
+words, separated by spaces.
+
+As is conventional for crosswords and the Mystery Hunt, we don't consider
+the spaces very important. All inputs will be converted to a form we call
+a 'slug'. In solvertools, a slug is made only of the lowercase letters
+a to z, with no spaces, digits, or punctuation.
+
+To distinguish them from slugs, things that are supposed to be legible
+text are written in capital letters.
+
+As an example, the slug of "ESCAPE FROM ZYZZLVARIA" is "escapefromzyzzlvaria".
+
+
 Cromulence
 ==========
 
 "Cromulence" is how valid a sequence of letters is as a clue or a puzzle
-answer. It's measured in dB, with the reference point of 0 dB being the
+answer. It's measured in dB, kinda, with the reference point of 0 dB being the
 awkward meta-answer "OUI, PAREE'S GAY".
 
 Cromulence is rounded to an integer to avoid implying unreasonable
@@ -54,23 +104,9 @@ that this metric finds are:
     5   PREW
     5   DIN
 
-And the most interesting cromulent fake answers, made of random letters, that
-came out in several runs of testing were:
-
-    17  ALCUNI
-    15  CLANKS
-    12  LEVERDSEE
-    9   DTANDISCODE
-    9   ITOO
-    9   DRCELL
-    9   LEERECHO
-    7   EBOLASOSIT
-    7   RAGEMYLADSOK
-
-Those would be good inputs for a game of Metapuzzle Spaghetti.
 """
 from solvertools.util import db_path, data_path, wordlist_path, corpus_path
-from solvertools.normalize import alpha_slug, unspaced_lower
+from solvertools.normalize import slugify, unspaced_lower
 from solvertools.regextools import is_exact, regex_len, regex_slice
 from solvertools.letters import (
     alphagram, alphabytes_to_alphagram, anahash, consonantcy, alphabytes, random_letters
@@ -92,59 +128,10 @@ logger = logging.getLogger(__name__)
 # answer "OUI, PAREE'S GAY". (Our probability metric considers that a worse
 # answer than "TURKMENHOWAYOLLARY" or "ATZERODT OR VOLOKH EG".)
 NULL_HYPOTHESIS_ENTROPY = -4.192795083133463
-DECIBELS_PER_NEPER = 20 / log(10)
+DECIBEL_SCALE = 20 / log(10)
 
 
-def wordlist_path_from_name(name):
-    return wordlist_path(name + '.txt')
-
-
-def wordlist_db_connection(filename):
-    os.makedirs(db_path(''), exist_ok=True)
-    return sqlite3.connect(db_path(filename))
-
-
-def read_wordlist(name):
-    filepath = wordlist_path_from_name(name)
-    with open(filepath, encoding='utf-8') as wordfile:
-        for i, line in enumerate(wordfile):
-            if ',' not in line:
-                continue
-            line = line.rstrip()
-            text, freq = line.split(',', 1)
-            freq = int(freq)
-            slug = alpha_slug(text)
-            if slug:
-                yield (i, slug, freq, text)
-
-
-def combine_wordlists(weighted_lists, out_name):
-    freqs = defaultdict(float)
-    texts = {}
-    print("Combining %s" % weighted_lists)
-    for name, weight in weighted_lists:
-        for i, slug, freq, text in read_wordlist(name):
-            # Replace an existing text if this spelling of it has a solid
-            # majority of the frequency so far. Avoids weirdness such as
-            # spelling "THE" as "T'HE".
-            if slug not in texts or (freq * weight) > freqs[slug]:
-                texts[slug] = text
-            freqs[slug] += freq * weight
-            if i % 10000 == 0:
-                print("\t%s,%s" % (text, freq))
-
-    alphabetized = sorted(list(texts))
-    out_filename = wordlist_path_from_name(out_name)
-    with open(out_filename, 'w', encoding='utf-8') as out:
-        print("Writing %r" % out)
-        for i, slug in enumerate(alphabetized):
-            line = "%s,%s" % (texts[slug], int(freqs[slug]))
-            print(line, file=out)
-            if i % 10000 == 0:
-                print("\t%s,%s" % (texts[slug], int(freqs[slug])))
-
-
-class DBWordlist:
+class Wordlist:
     schema = [
         """
         CREATE TABLE words (
@@ -166,6 +153,9 @@ class DBWordlist:
     max_indexed_length = 25
 
     def __init__(self, name):
+        """
+        Load a wordlist, given its name.
+        """
         self.name = name
         self.db = wordlist_db_connection(name + '.wl.db')
         self._word_cache = {}
@@ -174,10 +164,22 @@ class DBWordlist:
         self.logtotal = None
 
     def __contains__(self, word):
-        slug = alpha_slug(word)
+        """
+        `word in wordlist` is a quick, idiomatic way to tell if the given word
+        (or phrase) appears in the wordlist.
+
+        The word can be entered in natural form, possibly with capital letters
+        and spaces. It will be converted to a lowercase, unspaced 'slug' here.
+        """
+        slug = slugify(word)
         return self.lookup_slug(slug) is not None
 
     def lookup_slug(self, slug):
+        """
+        Given an alphabetic 'slug', find its corresponding row of the
+        database. If there is such a row, return its unscaled frequency and
+        its text (including spaces). If not, return None.
+        """
         if slug in self._word_cache:
             return self._word_cache[slug]
         c = self.db.cursor()
@@ -187,6 +189,10 @@ class DBWordlist:
         return result
 
     def segment_logprob(self, slug):
+        """
+        If this slug appears directly in the word list, return its log
+        probability and its text. Otherwise, return None.
+        """
         if self.logtotal is None:
             totalfreq, _ = self.lookup_slug('')
             self.logtotal = log(totalfreq)
@@ -198,7 +204,11 @@ class DBWordlist:
         return logprob, text
 
     def text_logprob(self, text):
-        slug = alpha_slug(text)
+        """
+        Get the log probability of this text, along with its most likely
+        spacing, gluing it together with multiple "segments" if necessary.
+        """
+        slug = slugify(text)
         n = len(slug)
         best_partial_results = ['']
         best_logprobs = [0.]
@@ -223,20 +233,30 @@ class DBWordlist:
         return best_logprobs[-1], best_partial_results[-1]
 
     def cromulence(self, text):
-        slug = alpha_slug(text)
+        """
+        Estimate how likely this text is to be an answer. The "cromulence"
+        scale is defined at the top of this module.
+        """
+        slug = slugify(text)
         if len(slug) == 0:
             return (0, '')
         logprob, found_text = self.text_logprob(slug)
         entropy = logprob / (len(slug) + 1)
-        cromulence = round((entropy - NULL_HYPOTHESIS_ENTROPY) * DECIBELS_PER_NEPER)
+        cromulence = round((entropy - NULL_HYPOTHESIS_ENTROPY) * DECIBEL_SCALE)
         return cromulence, found_text
 
     def logprob_to_cromulence(self, logprob, length):
+        """
+        Convert a log probability to the 'cromulence' scale, which only
+        requires knowing the length of the text.
+        """
         entropy = logprob / (length + 1)
-        cromulence = round((entropy - NULL_HYPOTHESIS_ENTROPY) * DECIBELS_PER_NEPER)
-        return cromulence        
+        cromulence = round((entropy - NULL_HYPOTHESIS_ENTROPY) * DECIBEL_SCALE)
+        return cromulence
 
     def grep(self, pattern, length=None):
+        """
+        """
         pattern = unspaced_lower(pattern)
         if is_exact(pattern):
             if pattern in self:
@@ -285,7 +305,9 @@ class DBWordlist:
             # If there are variable-length matches, the dynamic programming
             # strategy won't work, so fall back on grepping for complete
             # matches in the wordlist.
-            return list(islice(self.grep(pattern), count))
+            items = list(self.grep(pattern))
+            items.sort(reverse=True)
+            return items[:count]
 
         best_partial_results = [[]]
         for right_edge in range(1, maxlen + 1):
@@ -404,7 +426,7 @@ class DBWordlist:
         return self.grep_one(pattern)
 
     def __repr__(self):
-        return "DBWordlist(%r)" % self.name
+        return "Wordlist(%r)" % self.name
 
     def _open_mmap(self, path):
         openfile = open(path, 'r+b')
@@ -509,6 +531,24 @@ class DBWordlist:
             file.close()
 
     def test_cromulence(self):
+        """
+        More trivia about cromulence:
+
+        The most interesting cromulent fake answers, made of random letters, that
+        came out in several runs of testing were:
+
+            17  ALCUNI
+            15  CLANKS
+            12  LEVERDSEE
+            9   DTANDISCODE
+            9   ITOO
+            9   DRCELL
+            9   LEERECHO
+            7   EBOLASOSIT
+            7   RAGEMYLADSOK
+
+        Those would be good inputs for a game of Metapuzzle Spaghetti.
+        """
         real_answers = []
         for year in ['2004', '2005', '2006', '2007', '2008', '2011', '2012']:
             with open(corpus_path('answers/mystery%s.txt' % year)) as file:
@@ -556,13 +596,85 @@ class DBWordlist:
         return results[0]
 
 
+def wordlist_path_from_name(name):
+    """
+    Get the path to the plain-text form of a wordlist.
+    """
+    return wordlist_path(name + '.txt')
+
+
+def wordlist_db_connection(filename):
+    """
+    Get a SQLite DB connection for a wordlist. (The DB must previously
+    have been built.)
+    """
+    os.makedirs(db_path(''), exist_ok=True)
+    return sqlite3.connect(db_path(filename))
+
+
+def read_wordlist(name):
+    """
+    Read a wordlist from a comma-separated plain-text file, and iterate
+    its entries in order.
+    """
+    filepath = wordlist_path_from_name(name)
+    with open(filepath, encoding='utf-8') as wordfile:
+        for i, line in enumerate(wordfile):
+            if ',' not in line:
+                continue
+            line = line.rstrip()
+            text, freq = line.split(',', 1)
+            freq = int(freq)
+            slug = slugify(text)
+            if slug:
+                yield (i, slug, freq, text)
+
+
+def combine_wordlists(weighted_lists, out_name):
+    """
+    This function is used in building the combined wordlist called WORDS.
+    It reads several wordlists from their plain-text form, and adds together
+    the frequencies of the words they contain, applying a multiplicative
+    weight to each.
+    """
+    freqs = defaultdict(float)
+    texts = {}
+    print("Combining %s" % weighted_lists)
+    for name, weight in weighted_lists:
+        for i, slug, freq, text in read_wordlist(name):
+            # Replace an existing text if this spelling of it has a solid
+            # majority of the frequency so far. Avoids weirdness such as
+            # spelling "THE" as "T'HE".
+            if slug not in texts or (freq * weight) > freqs[slug]:
+                texts[slug] = text
+            freqs[slug] += freq * weight
+            if i % 10000 == 0:
+                print("\t%s,%s" % (text, freq))
+
+    alphabetized = sorted(list(texts))
+    out_filename = wordlist_path_from_name(out_name)
+    with open(out_filename, 'w', encoding='utf-8') as out:
+        print("Writing %r" % out)
+        for i, slug in enumerate(alphabetized):
+            line = "%s,%s" % (texts[slug], int(freqs[slug]))
+            print(line, file=out)
+            if i % 10000 == 0:
+                print("\t%s,%s" % (texts[slug], int(freqs[slug])))
+
+
 def build_extras(name):
-    dbw = DBWordlist(name)
+    """
+    Load a wordlist with a particular name, and create additional files that
+    enable more operations on the wordlist -- a file that can be mmapped and
+    grepped quickly, a file of 'alphabytes' that can be mmapped and grepped to
+    find anagrams, and a database of 'wordplay' properties of words.
+    """
+    dbw = Wordlist(name)
     dbw.build_db()
     dbw.write_greppable_lists()
     dbw.write_alphabytes()
     dbw.build_wordplay()
 
 
-WORDS = DBWordlist('combined')
-SCRAB = DBWordlist('scrab')
+WORDS = Wordlist('combined')
+SCRAB = Wordlist('scrab')

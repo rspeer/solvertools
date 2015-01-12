@@ -1,11 +1,11 @@
 from solvertools.wordlist import WORDS, show_best_results
-from solvertools.letters import alpha_slug
+from solvertools.letters import slugify
 from itertools import permutations
 
 
 def brute_force_diagonalize(answers, wordlist=WORDS):
     results = []
-    answers = [alpha_slug(word) for word in answers]
+    answers = [slugify(word) for word in answers]
     for i, permutation in enumerate(permutations(answers)):
         if i % 1000 == 0:
             print(i)

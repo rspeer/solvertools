@@ -1,3 +1,4 @@
+from solvertools.wordlist import WORDS
 from solvertools.normalize import slugify
 from solvertools.util import data_path
 from whoosh.index import open_dir
@@ -10,6 +11,9 @@ QUERY_PARSER = None
 
 def search(pattern=None, clue=None, length=None, num=20):
     global INDEX, QUERY_PARSER
+    if clue is None:
+        return WORDS.search(pattern)
+
     if pattern is not None:
         pattern = pattern.lstrip('^').rstrip('$').lower()
         pattern = re.compile('^' + pattern + '$')

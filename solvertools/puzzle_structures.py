@@ -1,6 +1,16 @@
-from solvertools.wordlist import WORDS, show_best_results
+from solvertools.wordlist import WORDS
 from solvertools.letters import slugify
+from solvertools.regextools import regex_index, regex_len
 from itertools import permutations
+
+
+def diagonalize(items):
+    """
+    Take the diagonal of a list of words. If the diagonal runs off the end
+    of a word, raise an IndexError.
+    """
+    # TODO: work with regexes
+    return [items[i][i] for i in range(len(items))]
 
 
 def brute_force_diagonalize(answers, wordlist=WORDS):
@@ -10,7 +20,7 @@ def brute_force_diagonalize(answers, wordlist=WORDS):
         if i % 1000 == 0:
             print(i)
         try:
-            diag = ''.join(permutation[i][i] for i in range(len(answers)))
+            diag = diagonalize(permutation)
         except IndexError:
             continue
         found = wordlist.search(diag, count=1)

@@ -15,6 +15,7 @@ WORDLISTS = $(WORDLIST_DIR)/enable.txt $(WORDLIST_DIR)/twl06.txt \
 	$(WORDLIST_DIR)/google-books-1grams.freq.txt \
 	$(WORDLIST_DIR)/google-books.txt \
 	$(WORDLIST_DIR)/wikipedia-en-titles.txt \
+	$(WORDLIST_DIR)/wikipedia-en-links.txt \
 	$(WORDLIST_DIR)/wordnet.txt \
 	$(WORDLIST_DIR)/csw-apr07.txt \
 	$(WORDLIST_DIR)/npl-allwords.txt
@@ -47,6 +48,9 @@ $(WORDLIST_DIR)/twl06.txt: $(WORDLIST_DIR)/raw/twl06.txt shell/freq1.sh
 
 $(WORDLIST_DIR)/wikipedia-en-titles.txt: $(WORDLIST_DIR)/raw/wikipedia-en-titles.txt
 	egrep -hv " .* .* " $< | shell/freq1.sh > $@
+
+$(WORDLIST_DIR)/wikipedia-en-links.txt: $(WORDLIST_DIR)/raw/wp-links-sorted.txt
+	$(PYTHON) scripts/transform_wp_freq.py < $< > $@
 
 $(WORDLIST_DIR)/wordnet.txt: $(WORDLIST_DIR)/raw/wordnet.txt
 	LC_ALL=C egrep -h "^[A-Za-z0-9'/ -]+$$" $< | tr a-z A-Z | shell/freq1.sh > $@

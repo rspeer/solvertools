@@ -104,18 +104,27 @@ In case you're wondering, the least-cromulent Mystery Hunt clues and answers
 that this metric finds are:
 
     -6  YORYU
-    -2  N
+    -3  N
     -2  E
     -1  HUERFANA
     0   OUI PAREE'S GAY
     0   OCEAN E HQ
     0   UV
-    0   HIFIS
     1   BABE WYNERY
+    1   HIFIS
     1   IO
     2   ALT F FOUR
     2   ACQUIL
     4   OTTO HID JAN'S KEY
+    5   V NECK
     5   PREW
     5   DIN
+    6   NEA
+    7   KLAK RING
+    7   WEBISMS
+    7   NEATIFY
+    7   QUEUER
+    7   PG WORD
+    7   GOOIER
+    7   VI
 

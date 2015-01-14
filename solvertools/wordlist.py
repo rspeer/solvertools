@@ -135,7 +135,7 @@ class Wordlist:
             return (0, '')
         logprob, found_text = self.text_logprob(slug)
         entropy = logprob / (len(slug) + 1)
-        cromulence = round((entropy - NULL_HYPOTHESIS_ENTROPY) * DECIBEL_SCALE)
+        cromulence = round((entropy - NULL_HYPOTHESIS_ENTROPY) * DECIBEL_SCALE, 1)
         return cromulence, found_text
 
     def logprob_to_cromulence(self, logprob, length):
@@ -144,12 +144,15 @@ class Wordlist:
         requires knowing the length of the text.
         """
         entropy = logprob / (length + 1)
-        cromulence = round((entropy - NULL_HYPOTHESIS_ENTROPY) * DECIBEL_SCALE)
+        cromulence = round((entropy - NULL_HYPOTHESIS_ENTROPY) * DECIBEL_SCALE, 1)
         return cromulence
 
-    def grep(self, pattern, length=None):
+    def grep(self, pattern, length=None, count=1000):
         """
+        Search the wordlist quickly for words matching a given pattern.
+        Yield them as they are found (not in sorted order).
 
+        Yields (logprob, text) for each match.
         """
         pattern = unspaced_lower(pattern)
         if is_exact(pattern):
@@ -165,6 +168,7 @@ class Wordlist:
         if maxlen > self.max_indexed_length:
             maxlen = self.max_indexed_length
 
+        num_found = 0
         for cur_length in range(minlen, maxlen + 1):
             if cur_length not in self._grep_maps:
                 mm = self._open_mmap(
@@ -181,12 +185,21 @@ class Wordlist:
             match = re.match(pattern1, mm)
             if match:
                 found = mm[match.start():match.end() - 1].decode('ascii')
+                num_found += 1
                 yield self.segment_logprob(found)
             for match in re.finditer(pattern2, mm):
                 found = mm[match.start() + 1:match.end() - 1].decode('ascii')
+
+                num_found += 1
                 yield self.segment_logprob(found)
+                if num_found >= count:
+                    return
 
     def grep_one(self, pattern, length=None):
+        """
+        Like .grep(), but returns only one result, or None if there are no
+        results.
+        """
         for result in self.grep(pattern, length):
             return result
 
@@ -462,14 +475,14 @@ class Wordlist:
         for ans in real_answers:
             cromulence, spaced = self.cromulence(ans)
             logprob, _ = self.text_logprob(ans)
-            if cromulence >= 1:
+            if cromulence > 0:
                 results.append((cromulence, logprob, spaced, 'true positive'))
             else:
                 results.append((cromulence, logprob, spaced, 'false negative'))
         for ans in fake_answers:
             cromulence, spaced = self.cromulence(ans)
             logprob, _ = self.text_logprob(ans)
-            if cromulence >= 1:
+            if cromulence > 0:
                 results.append((cromulence, logprob, spaced, 'false positive'))
             else:
                 results.append((cromulence, logprob, spaced, 'true negative'))
@@ -480,15 +493,15 @@ class Wordlist:
         recall = counts['true positive'] / (counts['true positive'] + counts['false negative'])
         f_score = 2/(1/precision + 1/recall)
         for cromulence, logprob, spaced, category in results:
-            print("%d\t%2.2f\t%s\t%s" % (cromulence, logprob, category, spaced))
+            print("%1.1f\t%2.2f\t%s\t%s" % (cromulence, logprob, category, spaced))
         print("Precision: %2.2f%%" % (precision * 100))
         print("Recall: %2.2f%%" % (recall * 100))
         return f_score
 
-    def show_best_results(self, results):
+    def show_best_results(self, results, count=20):
         results.sort(reverse=True)
         print("Log prob.\tCromulence\tText")
-        for logprob, text in results[:20]:
+        for logprob, text in results[:count]:
             cromulence, spaced = self.cromulence(text)
             print("%4.4f\t%d\t\t%s" % (logprob, cromulence, spaced))
         return results[0]
@@ -576,3 +589,15 @@ def build_extras(name):
 
 WORDS = Wordlist('combined')
 SCRAB = Wordlist('scrab')
+
+
+def cromulence(text):
+    return WORDS.cromulence(text)
+
+
+def find_by_alphagram(text):
+    return WORDS.find_by_alphagram(alphagram(slugify(text)))
+
+
+def find_by_consonantcy(text):
+    return WORDS.find_by_consonantcy(consonantcy(slugify(text)))

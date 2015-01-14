@@ -16,7 +16,8 @@ def transform():
             if freq == 1:
                 break
             name = normalize_wp_link(match.group(2)).strip()
-            print('%s,%d' % (name, freq))
+            if name:
+                print('%s,%d' % (name, freq))
 
 
 transform()

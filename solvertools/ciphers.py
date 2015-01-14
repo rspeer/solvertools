@@ -52,9 +52,9 @@ def caesar_unshift(text, offset):
     return caesar_shift(text, -offset)
 
 
-def best_caesar_shift(text, wordlist=WORDS):
+def best_caesar_shift(text, wordlist=WORDS, count=5):
     possibilities = [caesar_shift(text, n) for n in range(26)]
     results = []
     for poss in possibilities:
         results.extend(wordlist.search(poss))
-    return wordlist.show_best_results(results)
+    return wordlist.show_best_results(results, count=count)

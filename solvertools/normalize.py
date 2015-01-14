@@ -3,6 +3,7 @@ import re
 
 
 NONALPHA_RE = re.compile(r'[^a-z]')
+DIGIT_RE = re.compile(r'[0-9]')
 PUNCTUATION_RE = re.compile(r"[^A-Za-z0-9' ]")
 PARENTHESIS_RE = re.compile(r' \(.*\)')
 SPACES_RE = re.compile(r'  +')
@@ -14,6 +15,13 @@ def slugify(text):
     "slug", and that's the term we use for it throughout solvertools.
     """
     return NONALPHA_RE.sub('', text.lower())
+
+
+def sanitize(text):
+    """
+    Return a text as a sequence of letters, digits, apostrophes, and spaces.
+    """
+    return SPACES_RE.sub(' ', PUNCTUATION_RE.sub(' ', text))
 
 
 def unspaced_lower(text):
@@ -41,7 +49,10 @@ def transform_simple_numbers(word):
         else:
             return ''
     else:
-        return word
+        if DIGIT_RE.search(word):
+            return ''
+        else:
+            return word
 
 
 def fix_entities(text):

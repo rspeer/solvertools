@@ -128,3 +128,57 @@ that this metric finds are:
     7   GOOIER
     7   VI
 
+
+Examples
+========
+
+Brute-force diagonalization
+---------------------------
+
+Here's the first recorded example of an answer on a diagonal in the Mystery
+Hunt, the 1995 puzzle "Billiard Room". You're told to solve a logic puzzle
+to order the 10 teams in the Central League of Underappreciated Employees,
+then take the Nth letter from each team name. But with these 10 team names and
+Solvertools, we don't have to solve the puzzle.
+
+    >>> teams = [
+    ...     'back-up singers',
+    ...     'channel surfers',
+    ...     'dermatologists',
+    ...     'etymologists',
+    ...     'receptionists',
+    ...     'short order cooks',
+    ...     'talk show hosts',
+    ...     'taxi drivers',
+    ...     'televangelists',
+    ...     'undertakers'
+    ... ]
+    >>> brute_force_diagonalize(teams, quiet=True)
+    Tried 10000 permutations
+    [...]
+    Tried 3620000 permutations
+    Log prob.   Cromulence  Text
+    -12.9031    26      DELIVERIES
+    -18.0365    22      STRIP POKER
+    -18.1996    22      DE DISPOSER
+    -18.3727    22      TEAR STAINS
+    -18.7234    22      BE RESERVES
+    -19.0139    21      ENLISTS OUR
+    -19.2645    21      BE DESERVES
+    -19.4999    21      SAY EARLIER
+    -20.5336    20      BE RESOLVES
+    -20.5965    20      TALENT OVER
+    -20.9823    20      TEAM STRONG
+    -21.0412    20      CHRIST SOIL
+    -21.4347    19      RARE SERIES
+    -21.4892    19      THY EARLIER
+    -21.8216    19      RAY EARLIER
+    -21.9774    19      CALM STRONG
+    -22.2095    19      BEAR STAGES
+    -22.2998    19      TERRORS OUR
+    -22.3016    19      TELESERIES
+    -22.3016    19      BADEN TOWER
+    (-12.903120689538845, 'DELIVERIES')
+
+DELIVERIES is actually the right answer.
+

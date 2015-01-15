@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 # that is just barely an answer, for which we use the entropy of the meta
 # answer "OUI, PAREE'S GAY". (Our probability metric considers that a worse
 # answer than "TURKMENHOWAYOLLARY" or "ATZERODT OR VOLOKH EG".)
-NULL_HYPOTHESIS_ENTROPY = -4.192795083133463
+NULL_HYPOTHESIS_ENTROPY = -4.195522303459861
 DECIBEL_SCALE = 20 / log(10)
 
 
@@ -130,8 +130,9 @@ class Wordlist:
                 found2 = self.segment_logprob(slug[left_edge:right_edge])
                 if found2:
                     rprob, rtext = found2
-                    if lprob + rprob > best_logprobs[right_edge]:
-                        best_logprobs[right_edge] = lprob + rprob - log(10)
+                    totalprob = lprob + rprob - log(10)
+                    if totalprob > best_logprobs[right_edge]:
+                        best_logprobs[right_edge] = totalprob
                         ltext = best_partial_results[left_edge]
                         best_partial_results[right_edge] = ltext + ' ' + rtext
         return best_logprobs[-1], best_partial_results[-1]

@@ -1,11 +1,6 @@
 Prerequisites
 =============
-You need Python 3.3+, Make, and GNU tools such as 'grep' and 'sort'. You also
-either need NumPy or the tools necessary to build it.
-
-On Ubuntu, I prepare to build NumPy using:
-
-    sudo apt-get install build-essential python3-dev gfortran
+You need Python 3.3+, Make, and GNU tools such as 'grep' and 'sort'.
 
 To install the code, run:
 

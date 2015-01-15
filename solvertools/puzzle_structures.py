@@ -18,6 +18,16 @@ class RegexClue:
     def match(self, text):
         return self.compiled.match(text)
 
+    def resolve(self):
+        """
+        Get the most likely word that fits this pattern.
+        """
+        if self.expr == '.+':
+            # a shortcut for a common case
+            return 'THE'
+        found = WORDS.search(self.expr, count=1)
+        return found[0][1]
+
     def __getitem__(self, index):
         return regex_index(self.expr, index)
 
@@ -126,3 +136,29 @@ def brute_force_diagonalize(answers, wordlist=WORDS, quiet=False):
                 results.append((logprob, text))
                 seen.add(slug)
     return wordlist.show_best_results(results)
+
+
+def resolve(item):
+    if isinstance(item, str):
+        return item
+    else:
+        return item.resolve()
+
+
+def _index_everything_into_everything(grid):
+    titles = grid[0]
+    ncols = len(titles)
+    nrows = len(grid) - 1
+
+    for sort_col in [None] + list(range(ncols)):
+        if sort_col is None:
+            ordered = grid[1:]
+        else:
+            sort_keys = [(row, resolve(grid[sort_col][row])) for row in range(1, nrows + 1)]
+            sort_keys.sort(key=lambda x: x[1])
+            ordered = [grid[row] for row, key in sort_keys]
+
+        for indexed_col in range(ncols):
+            items = [grid_row[indexed_col] for grid_row in ordered]
+            yield diagonalize(items)
+

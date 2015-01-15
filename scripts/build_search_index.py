@@ -6,7 +6,6 @@ from whoosh.analysis import StemmingAnalyzer
 from whoosh.index import create_in
 import nltk
 import os
-get_synset = wordnet._synset_from_pos_and_offset
 
 
 schema = Schema(
@@ -17,18 +16,20 @@ schema = Schema(
 )
 
 
-def get_adjacent(synset):
-    return [
-        name
-        for pointer_tuples in synset._pointers.values()
-        for pos, offset in pointer_tuples
-        for name in get_synset(pos, offset).lemma_names()
-    ]
-
-
 def init_search_index():
     nltk.download('wordnet')
     from nltk.corpus import wordnet
+    get_synset = wordnet._synset_from_pos_and_offset
+    
+    def get_adjacent(synset):
+        return [
+            name
+            for pointer_tuples in synset._pointers.values()
+            for pos, offset in pointer_tuples
+            for name in get_synset(pos, offset).lemma_names()
+        ]
+
+
     os.makedirs(data_path('search'), exist_ok=True)
     ix = create_in(data_path('search'), schema)
     writer = ix.writer(procs=4)

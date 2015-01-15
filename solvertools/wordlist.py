@@ -96,6 +96,17 @@ class Wordlist:
         logprob = log(freq) - self.logtotal
         return logprob, text
 
+    def logprob(self, word):
+        """
+        Get the log probability of a single item in the wordlist.
+        Always returns just a number, which is -1000 if it's not found.
+        """
+        found = self.lookup_slug(slugify(word))
+        if found is None:
+            return -1000.
+        else:
+            return found[0]
+
     def text_logprob(self, text):
         """
         Get the log probability of this text, along with its most likely

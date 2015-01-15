@@ -37,19 +37,20 @@ def init_search_index():
     count = 0
     for slug, freq, text in WORDS.iter_all_by_freq():
         words = text.split()
-        if freq < 1000:
+        if freq < 10000:
             break
         if len(words) > 1:
             count += 1
             if count % 10000 == 0:
                 print("%s,%s" % (text, freq))
             for word in words:
-                writer.add_document(
-                    slug=slug,
-                    text=word,
-                    definition=text,
-                    length=len(slug)
-                )
+                if WORDS.logprob(word) < -7:
+                    writer.add_document(
+                        slug=slug,
+                        text=word,
+                        definition=text,
+                        length=len(slug)
+                    )
 
     # Add crossword clues
     for line in open(corpus_path('crossword_clues.txt'), encoding='utf-8'):

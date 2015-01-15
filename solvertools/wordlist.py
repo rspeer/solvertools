@@ -512,7 +512,7 @@ class Wordlist:
             if info is None:
                 info = ''
             print("%4.4f\t%1.1f\t%s\t%s" % (logprob, cromulence, spaced, info))
-        return results[0]
+        return results[:count]
 
 
 def wordlist_path_from_name(name):

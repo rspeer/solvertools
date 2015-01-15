@@ -68,7 +68,7 @@ def parse_csv_row(row):
 
 def read_csv_string(string):
     reader = csv.reader(string.split('\n'))
-    return [parse_csv_row(row) for row in reader]
+    return [parse_csv_row(row) for row in reader if row]
 
 
 def read_csv_file(filename):
@@ -101,7 +101,7 @@ def brute_force_diagonalize(answers, wordlist=WORDS, quiet=False):
     answers from the 2000 metas, but don't remember their order:
 
         >>> metas = ['benjamins', 'billgates', 'donors', 'luxor', 'mansion', 'miserly', 'realty']
-        >>> brute_force_diagonalize(metas)   # doctest: +NORMALIZE_WHITESPACE
+        >>> brute_force_diagonalize(metas)[0]   # doctest: +NORMALIZE_WHITESPACE
         Log prob.   Cromulence  Text    Info
         -19.4797    15.3    MENOROT 
         -19.8101    14.9    BE NOISY    
@@ -158,10 +158,7 @@ def resolve(item):
     if isinstance(item, RegexClue):
         return item.resolve()
     else:
-        if item.isdigit():
-            return int(item)
-        else:
-            return item
+        return item
 
 
 def _index_by(indexee, index):
@@ -234,8 +231,17 @@ DIGITS_RE = re.compile(r'[0-9]')
 
 
 def index_all_the_things(grid):
+    """
+    Try every combination of sorting by one column and indexing another column,
+    possibly by the numeric values in a third column.
+    """
     titles = grid[0]
-    data = grid[1:]
+    ncols = len(titles)
+    data = []
+    for row in grid[1:]:
+        if len(row) < ncols:
+            row = row + [RegexClue(ANY)] * (ncols - len(row))
+        data.append(row)
     best_logprob = -1000
     results = []
     seen = set()
@@ -256,7 +262,7 @@ def index_all_the_things(grid):
 
 
 def indexing_demo():
-    filename = data_path('test/soylent_incomplete.csv')
+    filename = data_path('test/soylent_partners.csv')
     grid = read_csv_file(filename)
     index_all_the_things(grid)
 

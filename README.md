@@ -194,7 +194,7 @@ Solvertools, we don't have to solve the puzzle.
     ...     'televangelists',
     ...     'undertakers'
     ... ]
-    >>> brute_force_diagonalize(teams, quiet=True)
+    >>> brute_force_diagonalize(teams)[0]
     Tried 10000 permutations
     [...]
     Tried 3620000 permutations

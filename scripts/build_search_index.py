@@ -32,6 +32,19 @@ def init_search_index():
     ix = create_in(data_path('search'), schema)
     writer = ix.writer(procs=4)
 
+    # Add lookups from a phrase to a word in that phrase
+    for slug, freq, text in WORDS.iter_all_by_freq():
+        words = text.split()
+        if len(words) > 1:
+            for word in words:
+                writer.add_document(
+                    slug=slug,
+                    text=word,
+                    definition=text,
+                    length=len(slug)
+                )
+
+    # Add crossword clues
     for line in open(corpus_path('crossword_clues.txt'), encoding='utf-8'):
         text, defn = line.rstrip().split('\t')
         slug = slugify(text)
@@ -43,6 +56,7 @@ def init_search_index():
             length=len(slug)
         )
 
+    # Add WordNet glosses and links
     synsets = wordnet.all_synsets()
     for syn in synsets:
         lemmas = [lem.replace('_', ' ') for lem in syn.lemma_names()]

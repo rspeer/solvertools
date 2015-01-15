@@ -181,6 +181,38 @@ def consonantcy(slug):
     return VOWELS_RE.sub('', slug)
 
 
+PHONESPELL_MAP = dict(zip(
+    'abcdefghijklmnopqrstuvwxyz',
+    '22233344455566677778889999'
+))
+UN_PHONESPELL_MAP = {
+    '2': '[abc]',
+    '3': '[def]',
+    '4': '[ghi]',
+    '5': '[jkl]',
+    '6': '[mno]',
+    '7': '[pqrs]',
+    '8': '[tuv]',
+    '9': '[wxyz]'
+}
+
+
+def phonespell(text):
+    "Convert letters to the digits 2-9 on a phone keypad."
+    return ''.join(PHONESPELL_MAP[ch] for ch in slugify(text))
+
+
+def un_phonespell(digits):
+    """
+    Convert digits 2-9 to a regular expression of letters, matching what
+    they spell on a phone keypad.
+    """
+    if isinstance(digits, int):
+        digits = str(digits)
+    pattern = ''.join(UN_PHONESPELL_MAP[digit] for digit in digits)
+    return pattern
+
+
 def random_letters(num):
     """
     Get `num` random letters that are distributed like English. Useful for

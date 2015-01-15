@@ -1,3 +1,4 @@
+from solvertools.wordlist import WORDS
 from solvertools.normalize import slugify
 from solvertools.util import data_path, corpus_path
 from whoosh.fields import Schema, ID, TEXT, KEYWORD, NUMERIC
@@ -33,9 +34,15 @@ def init_search_index():
     writer = ix.writer(procs=4)
 
     # Add lookups from a phrase to a word in that phrase
+    count = 0
     for slug, freq, text in WORDS.iter_all_by_freq():
         words = text.split()
+        if freq < 1000:
+            break
         if len(words) > 1:
+            count += 1
+            if count % 10000 == 0:
+                print("%s,%s" % (text, freq))
             for word in words:
                 writer.add_document(
                     slug=slug,

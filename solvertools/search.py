@@ -10,6 +10,19 @@ QUERY_PARSER = None
 
 
 def search(pattern=None, clue=None, length=None, count=20):
+    """
+    Find words and phrases that match various criteria: a regex pattern,
+    a clue phrase, and/or a length.
+
+    >>> search('.a.b.c..')[0][1]
+    'BARBECUE'
+    >>> search('.a......', clue='US President')[0][1]
+    'VAN BUREN'
+    >>> search(clue='lincoln assassin', length=15)[0][1]
+    'JOHN WILKES BOOTH'
+    >>> search(clue='mad, like a punk', length=4)[0][1]
+    'DAFT'
+    """
     global INDEX, QUERY_PARSER
     if clue is None:
         return WORDS.search(pattern)

@@ -1,5 +1,6 @@
 import string
 from solvertools.wordlist import WORDS
+from itertools import cycle
 ASCII_a = 97
 
 
@@ -53,8 +54,53 @@ def caesar_unshift(text, offset):
 
 
 def best_caesar_shift(text, wordlist=WORDS, count=5):
+    """
+    Find the most cromulent Caesar shift of a ciphertext.
+    """
     possibilities = [caesar_shift(text, n) for n in range(26)]
     results = []
     for poss in possibilities:
         results.extend([found + (n,) for found in wordlist.search(poss)])
     return wordlist.show_best_results(results, count=count)
+
+
+def vigenere_encode(text, key, one_based=False):
+    """
+    Apply the Vigenere cipher to `text`, with `key` as the key.
+
+    In this cipher, A + A = A, but in many cases in the Mystery Hunt,
+    A + A = B. To get the A + A = B behavior, set `one_based` to true.
+
+    >>> vigenere_encode('ABRACADABRA', 'abc')
+    'ACTADCDBDRB'
+    >>> vigenere_encode('ABRACADABRA', 'abc', one_based=True)
+    'BDUBEDECESC'
+    """
+    shifted = []
+    letters = [ch for ch in text if ch in string.ascii_letters]
+    shifted = [caesar_shift(ch, shift)
+               for (ch, shift) in zip(letters, cycle(key))]
+    result = ''.join(shifted)
+    if one_based:
+        result = caesar_shift(result, 1)
+    return result
+
+
+def vigenere_decode(text, key, one_based=False):
+    """
+    Decode a Vigenere cipher on `text`, with `key` as the key.
+
+    In this cipher, B - B = A, but in many cases in the Mystery Hunt,
+    B - B = Z. To get the B - B = Z behavior, set `one_based` to true.
+
+    >>> vigenere_decode(vigenere_encode('ABRACADABRA', 'abc'), 'abc')
+    'ABRACADABRA'
+    """
+    shifted = []
+    letters = [ch for ch in text if ch in string.ascii_letters]
+    shifted = [caesar_unshift(ch, shift)
+               for (ch, shift) in zip(letters, cycle(key))]
+    result = ''.join(shifted)
+    if one_based:
+        result = caesar_shift(result, -1)
+    return result

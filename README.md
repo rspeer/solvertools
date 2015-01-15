@@ -1,16 +1,26 @@
 Prerequisites
 =============
-You need Python 3.3+, Make, and GNU tools such as 'grep' and 'sort'.
+You need Python 3.3+, Make, and GNU tools such as 'grep' and 'sort'. You also
+either need NumPy or the tools necessary to build it.
 
-In a Python 3.3+ environment, run:
+On Ubuntu, I prepare to build NumPy using:
 
-    python setup.py develop
+    sudo apt-get install build-essential python3-dev gfortran
 
-To set up the wordlists, run:
+To install the code, run:
+
+    python3 setup.py develop
+
+Then, to set up the wordlists, run:
 
     make
 
-...and wait for maybe half an hour.
+...and wait for maybe an hour. (Getting a USB drive of the built data from
+someone is also an option.)
+
+One person (Paul) has possibly made this work on Windows, but you need a
+terminal that supports UTF-8, because I'm not going to hunt down all the things
+that can go wrong without it. Paul recommends msys2.
 
 
 Quick start
@@ -19,6 +29,28 @@ Quick start
     >>> from solvertools.all import *
     >>> search('rg.of.el.qu.ry')[0]
     (-33.868139189898926, 'RGB OF RELIQUARY')
+
+
+Where to find stuff
+===================
+Everything relevant is imported into `solvertools.all`, but I haven't had time
+to document all the individual operations. You'll have to look at the code
+and/or the docstrings.
+
+But here's an overview of what's in solvertools:
+
+    * `wordlist.py`: a model of words and their likelihood that lots of stuff
+      uses; the "cromulence" measure
+
+    * `letters.py`: operations on letters and multisets of letters. Alphagrams,
+      differences between alphagrams, consonantcies, phone-spell.
+
+    * `ciphers.py`: Caesar ciphers (including trying all possibilities), Vigenere
+      ciphers.
+
+    * `
+
+There's more stuff in https://github.com/dgulotta/puzzle-tools .
 
 
 Wordlists
@@ -51,8 +83,14 @@ This module defines two wordlists as globals:
   is found in, out of three: ENABLE2K, TWL06, and Collins April 2007
   (a successor to SOWPODS, although not the most up-to-date one).
 
+    >>> 'qat' in SCRAB
+    True
+    >>> 'phonies' in SCRAB
+    False
+
 We'll use WORDS for the examples here, because it's the best suited for
-them.
+them. It's also built into top-level functions such as search() and 
+cromulence().
 
 
 Words, phrases, and slugs
@@ -139,6 +177,24 @@ that this metric finds are:
     6.7   KLAK RING
     6.7   QUEUER
     6.8   WEBISMS
+
+
+Searching by patterns and clues
+===============================
+
+`search()` finds words given various criteria, which can include a regex
+pattern, a clue phrase, and/or a length.
+
+The results are ordered by descending goodness, which is the log probability of
+the text if there's no clue involved, or the score of the search result if
+there was a clue.
+
+    >>> search('.a.b.c..')[0][1]
+    'BARBECUE'
+    >>> search(clue='lincoln assassin', length=15)[0][1]
+    'JOHN WILKES BOOTH'
+    >>> search(clue='mad, like a punk', length=4)[0][1]
+    'DAFT'
 
 
 Examples

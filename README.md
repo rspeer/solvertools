@@ -55,6 +55,10 @@ But here's an overview of what's in solvertools:
   particularly by trying indexing everything into everything
   (`index_all_the_things`) or trying all the possible diagonals.
 
+* `anagram.py`: find interesting anagrams of sets of letters, even if there are
+  too many of them. (Please be advised that anagrams of, say, 20 letters are
+  for entertainment purposes only and should not be considered puzzle answers.)
+
 There's more stuff in https://github.com/dgulotta/puzzle-tools .
 
 

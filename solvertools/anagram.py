@@ -62,12 +62,15 @@ def eval_anagrams(gen, wordlist, count, quiet=False):
     """
     results = []
     used = set()
+    best_logprob = -1000
     for slug in gen:
         logprob, text = wordlist.text_logprob(slug)
         textblob = ''.join(sorted(text.split(' ')))
         if textblob not in used:
             if not quiet:
-                print("%4.4f\t%s" % (logprob, text))
+                if logprob > best_logprob:
+                    best_logprob = logprob
+                    print("%4.4f\t%s" % (logprob, text))
             cromulence = wordlist.logprob_to_cromulence(logprob, len(slug))
             results.append((cromulence, logprob, text))
             if len(results) >= count * 5:

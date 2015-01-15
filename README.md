@@ -13,6 +13,14 @@ To set up the wordlists, run:
 ...and wait for maybe half an hour.
 
 
+Quick start
+===========
+
+    >>> from solvertools.all import *
+    >>> search('rg.of.el.qu.ry')[0]
+    (-33.868139189898926, 'RGB OF RELIQUARY')
+
+
 Wordlists
 =========
 In solvertools, a wordlist is designed to store a set of words and their
@@ -61,7 +69,11 @@ a to z, with no spaces, digits, or punctuation.
 To distinguish them from slugs, things that are supposed to be legible
 text are written in capital letters.
 
-As an example, the slug of "ESCAPE FROM ZYZZLVARIA" is "escapefromzyzzlvaria".
+    >>> from solvertools.all import slugify
+    >>> slugify('ESCAPE FROM ZYZZLVARIA')
+    'escapefromzyzzlvaria'
+    >>> cromulence('escapefromzyzzlvaria')
+    (25.3, 'ESCAPE FROM ZYZZLVARIA')
 
 
 Cromulence
@@ -71,51 +83,143 @@ Cromulence
 answer. It's measured in dB, kinda, with the reference point of 0 dB being the
 awkward meta-answer "OUI, PAREE'S GAY".
 
-Cromulence is rounded to an integer to avoid implying unreasonable
-precision, and to avoid confusion with log probability. The possible
-values seem to range from -42 to 32.
+Cromulence is rounded to one decimal place to avoid implying unreasonable
+precision, and so that it's visually distinguishable from log probability in
+Python output. The possible values seem to range from -45 to 35.
 
 Positive cromulences correspond to real answers, with a precision of 99% and
 a recall of 86%, in a test against distractors made of random letters selected
 from an English letter distribution.
 
-    >>> WORDS.cromulence('mulugetawendimu')
-    (24, 'MULUGETA WENDIMU')
+The `cromulence` function (a shorthand for `WORDS.cromulence`) won't fill in
+blanks or regular expressions. Use `search` for that.
 
-    >>> WORDS.cromulence('rgbofreliquary')
-    (15, 'RGB OF RELIQUARY')
+    >>> from solvertools.all import cromulence
+    >>> cromulence('mulugetawendimu')
+    (25.1, 'MULUGETA WENDIMU')
 
-    >>> WORDS.cromulence('atzerodtorvolokheg')
-    (9, 'ATZERODT OR VOLOKH EG')
+    >>> cromulence('rgbofreliquary')
+    (14.9, 'RGB OF RELIQUARY')
 
-    >>> WORDS.cromulence('turkmenhowayollary')   # wrong spacing
-    (7, 'TURKMEN HOW AYO LLARY')
+    >>> cromulence('atzerodtorvolokheg')
+    (8.8, 'ATZERODT OR VOLOKH EG')
 
-    >>> WORDS.cromulence('ottohidjanskey')
-    (4, 'OTTO HID JANS KEY')
+    >>> cromulence('turkmenhowayollary')   # wrong spacing
+    (6.7, 'TURKMEN HOW AYO LLARY')
 
-    >>> WORDS.cromulence('ouipareesgay')
-    (0, "OUI PAREE 'S GAY")
+    >>> cromulence('ottohidjanskey')
+    (3.9, 'OTTO HID JANS KEY')
 
-    >>> WORDS.cromulence('yoryu')                # wrong spacing
-    (-6, 'YOR YU')
+    >>> cromulence('ouipareesgay')
+    (-0.0, "OUI PAREE 'S GAY")
+
+    >>> cromulence('yoryu')                # wrong spacing
+    (-6.2, 'YOR YU')
 
 In case you're wondering, the least-cromulent Mystery Hunt clues and answers
 that this metric finds are:
 
-    -6  YORYU
-    -2  N
-    -2  E
-    -1  HUERFANA
-    0   OUI PAREE'S GAY
-    0   OCEAN E HQ
-    0   UV
-    0   HIFIS
-    1   BABE WYNERY
-    1   IO
-    2   ALT F FOUR
-    2   ACQUIL
-    4   OTTO HID JAN'S KEY
-    5   PREW
-    5   DIN
+    -6.2  YORYU
+    -2.5  N
+    -1.6  E
+    -0.7  HUERFANA
+    0.0   OUI PAREE'S GAY
+    0.0   OCEAN E HQ
+    0.4   UV
+    1.0   IO
+    1.2   BABE WYNERY
+    1.2   HIFIS
+    1.8   ACQUIL
+    2.3   ALT F FOUR
+    3.9   OTTO HID JAN'S KEY
+    5.1   V NECK
+    5.0   PREW
+    5.4   DIN
+    6.3   NEA
+    6.7   KLAK RING
+    6.7   QUEUER
+    6.8   WEBISMS
+
+
+Examples
+========
+
+Shifting and anagramming in a loop
+----------------------------------
+Suppose you've got a puzzle with the positions of letters of the alphabet
+marked on a cycle of 26 dots, and you happen to know that these are going to
+be anagrams minus a letter of reasonable words, but you'd have to solve a
+different part of the puzzle to know which dot is A.
+
+You can skip ahead in this puzzle by using Solvertools to try all possible
+shifts, then anagram with one wildcard. Let's define a function that returns
+the results, in reverse order by cromulence, along with the distance that
+they're shifted through the alphabet:
+
+    >>> from solvertools.all import *
+    >>> def cyclogram(letters, additional=1):
+    ...     results = []
+    ...     for i in range(26):
+    ...         cae = caesar_shift(letters, i)
+    ...         ana = anagram_single(cae, wildcards=additional, count=10)
+    ...         results.extend([(an + (i,)) for an in ana])
+    ...     return sorted(results, reverse=True)
+    ...
+    >>> cyclogram('adegou')[:5]
+    [(22.8, 'WHISKEY', 4),
+     (20.5, 'CARIOUS', 14),
+     (19.7, 'COURT IS', 14),
+     (19.2, 'ROSCIUS', 14),
+     (19.0, 'I COURSE', 14)]
+
+Brute-force diagonalization
+---------------------------
+
+Here's the first recorded example of an answer on a diagonal in the Mystery
+Hunt, the 1995 puzzle "Billiard Room". You're told to solve a logic puzzle
+to order the 10 teams in the Central League of Underappreciated Employees,
+then take the Nth letter from each team name. But with these 10 team names and
+Solvertools, we don't have to solve the puzzle.
+
+    >>> from solvertools.all import *
+    >>> teams = [
+    ...     'back-up singers',
+    ...     'channel surfers',
+    ...     'dermatologists',
+    ...     'etymologists',
+    ...     'receptionists',
+    ...     'short order cooks',
+    ...     'talk show hosts',
+    ...     'taxi drivers',
+    ...     'televangelists',
+    ...     'undertakers'
+    ... ]
+    >>> brute_force_diagonalize(teams, quiet=True)
+    Tried 10000 permutations
+    [...]
+    Tried 3620000 permutations
+    Log prob.   Cromulence  Text
+    -12.9031    26      DELIVERIES
+    -18.0365    22      STRIP POKER
+    -18.1996    22      DE DISPOSER
+    -18.3727    22      TEAR STAINS
+    -18.7234    22      BE RESERVES
+    -19.0139    21      ENLISTS OUR
+    -19.2645    21      BE DESERVES
+    -19.4999    21      SAY EARLIER
+    -20.5336    20      BE RESOLVES
+    -20.5965    20      TALENT OVER
+    -20.9823    20      TEAM STRONG
+    -21.0412    20      CHRIST SOIL
+    -21.4347    19      RARE SERIES
+    -21.4892    19      THY EARLIER
+    -21.8216    19      RAY EARLIER
+    -21.9774    19      CALM STRONG
+    -22.2095    19      BEAR STAGES
+    -22.2998    19      TERRORS OUR
+    -22.3016    19      TELESERIES
+    -22.3016    19      BADEN TOWER
+    (-12.903120689538845, 'DELIVERIES')
+
+DELIVERIES is actually the right answer.
 

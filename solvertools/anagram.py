@@ -118,14 +118,14 @@ def adjusted_anagram_cost(item):
         raise ValueError
 
 
-def anagram_double(text, wildcards=0, wordlist=WORDS, max_results=100):
+def anagram_double(text, wildcards=0, wordlist=WORDS, count=100):
     """
     Search for anagrams that can be made of two words or phrases from the
     wordlist.
     """
     return eval_anagrams(
         _anagram_double(alphagram(slugify(text)), wildcards, wordlist),
-        wordlist, max_results
+        wordlist, count
     )
 
 
@@ -156,14 +156,14 @@ def _anagram_double_piece(slug1, alpha2, wildcards_remaining, wordlist):
         yield slug1 + slug2
 
 
-def anagrams(text, wildcards=0, wordlist=WORDS, max_results=100):
+def anagrams(text, wildcards=0, wordlist=WORDS, count=100):
     """
     Search for anagrams that are made of an arbitrary number of pieces from the
     wordlist.
     """
     return eval_anagrams(
         _anagram_recursive(alphagram(slugify(text)), wildcards, wordlist),
-        wordlist, max_results
+        wordlist, count
     )
 
 

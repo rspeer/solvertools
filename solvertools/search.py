@@ -31,10 +31,9 @@ def search(pattern=None, clue=None, length=None, count=20):
     with INDEX.searcher() as searcher:
         results = searcher.search(QUERY_PARSER.parse(clue), limit=20)
         # half-assed query expansion
-        clue_parts = [sanitize(result['text']) for result in results]
+        clue_parts = set([sanitize(result['text']) for result in results])
         expanded_clue = ", ".join(clue_parts)
         new_clue = '%s, (%s)^0.01' % (clue, expanded_clue)
-        print(new_clue)
         results = searcher.search(QUERY_PARSER.parse(new_clue), limit=None)
         seen = set()
         for i, result in enumerate(results):

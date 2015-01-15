@@ -11,7 +11,6 @@ from solvertools.letters import (
 )
 from solvertools.normalize import slugify
 import itertools
-import numpy as np
 
 
 letters_to_try = 'etaoinshrdlucympbgfvxwkjzq'

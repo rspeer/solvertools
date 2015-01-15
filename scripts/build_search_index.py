@@ -4,7 +4,6 @@ from solvertools.util import data_path, corpus_path
 from whoosh.fields import Schema, ID, TEXT, KEYWORD, NUMERIC
 from whoosh.analysis import StemmingAnalyzer
 from whoosh.index import create_in
-from nltk.corpus import wordnet
 import nltk
 import os
 get_synset = wordnet._synset_from_pos_and_offset
@@ -29,6 +28,7 @@ def get_adjacent(synset):
 
 def init_search_index():
     nltk.download('wordnet')
+    from nltk.corpus import wordnet
     os.makedirs(data_path('search'), exist_ok=True)
     ix = create_in(data_path('search'), schema)
     writer = ix.writer(procs=4)

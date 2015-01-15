@@ -1,4 +1,3 @@
-import numpy as np
 from solvertools.normalize import slugify
 import re
 import random
@@ -7,14 +6,14 @@ ASCII_a = 97
 
 # An estimate of the frequencies of letters in English, as a length-26
 # vector of proportions
-letter_freqs = np.array([
+letter_freqs = [
     0.08331452,  0.01920814,  0.04155464,  0.03997236,  0.11332581,
     0.01456622,  0.02694035,  0.02517641,  0.08116646,  0.00305369,
     0.00930784,  0.05399477,  0.02984008,  0.06982714,  0.06273243,
     0.0287359 ,  0.00204801,  0.07181286,  0.07714659,  0.06561591,
     0.03393991,  0.01232891,  0.01022719,  0.0037979 ,  0.01733258,
     0.00303336
-])
+]
 
 
 def letters_to_vec(letters):
@@ -22,7 +21,7 @@ def letters_to_vec(letters):
     Convert an iterator of lowercase letters, such as a 'slug' form, into
     a length-26 vector indicating how often those letters occur.
     """
-    vec = np.zeros(26)
+    vec = [0] * 26
     for letter in letters:
         index = ord(letter) - ASCII_a
         vec[index] += 1
@@ -34,7 +33,8 @@ def to_proportion(vec):
     Convert a vector that counts occurrences to a vector of proportions
     (whose sum is 1).
     """
-    return vec / vec.sum()
+    vecsum = sum(vec)
+    return [value / vecsum for value in vec]
 
 
 def alphagram(slug):
@@ -144,9 +144,11 @@ def anahash(slug):
     if slug == '':
         return ''
     vec = to_proportion(letters_to_vec(slug))
-    anomaly = vec - letter_freqs
-    codes = np.flatnonzero(anomaly > 0) + ASCII_a
-    return bytes(list(codes)).decode('ascii')
+    anomalies = []
+    for i in range(26):
+        if vec[i] > letter_freqs[i]:
+            anomalies.append(i + ASCII_a)
+    return bytes(list(anomalies)).decode('ascii')
 
 
 def anagram_cost(letters):
@@ -167,8 +169,11 @@ def anagram_cost(letters):
         return 0
     n_letters = len(letters)
     vec = to_proportion(letters_to_vec(letters))
-    discrepancy = (1 - vec / letter_freqs)
-    return np.sqrt((discrepancy ** 2).sum()) * n_letters
+    sq_cost = 0.0
+    for i in range(26):
+        discrepancy = (vec[i] / letter_freqs[i] - 1) ** 2
+        sq_cost += discrepancy
+    return sq_cost ** 0.5 * n_letters
 
 
 VOWELS_RE = re.compile('[aeiouy]')

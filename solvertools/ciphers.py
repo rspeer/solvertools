@@ -26,7 +26,7 @@ def caesar_shift(text, offset):
         >>> print(caesar_shift('caesar', 13))
         pnrfne
         >>> print(caesar_shift('CAESAR', 'C'))
-        RPTHPG
+        ECGUCT
 
     """
     if isinstance(offset, str):
@@ -44,7 +44,7 @@ def caesar_unshift(text, offset):
     it to a shift. (For example, a shift of 'C' means that 'C' goes to 'A',
     which is the same as a backward shift of 2.)
 
-        >>> print caesar_unshift('DBFTBS TIJGU', 1)
+        >>> print(caesar_unshift('DBFTBS TIJGU', 1))
         CAESAR SHIFT
     """
     if isinstance(offset, str):

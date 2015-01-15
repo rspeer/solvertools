@@ -56,5 +56,5 @@ def best_caesar_shift(text, wordlist=WORDS, count=5):
     possibilities = [caesar_shift(text, n) for n in range(26)]
     results = []
     for poss in possibilities:
-        results.extend(wordlist.search(poss))
+        results.extend([found + (n,) for found in wordlist.search(poss)])
     return wordlist.show_best_results(results, count=count)

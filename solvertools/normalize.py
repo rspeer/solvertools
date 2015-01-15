@@ -3,6 +3,7 @@ import re
 
 
 NONALPHA_RE = re.compile(r'[^a-z]')
+NONALPHANUM_RE = re.compile(r'[^a-z0-9]')
 DIGIT_RE = re.compile(r'[0-9]')
 PUNCTUATION_RE = re.compile(r"[^A-Za-z0-9' ]")
 PARENTHESIS_RE = re.compile(r' \(.*\)')
@@ -15,6 +16,10 @@ def slugify(text):
     "slug", and that's the term we use for it throughout solvertools.
     """
     return NONALPHA_RE.sub('', text.lower())
+
+
+def alphanumeric(text):
+    return NONALPHANUM_RE.sub('', text.lower())
 
 
 def sanitize(text):

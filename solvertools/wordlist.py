@@ -204,6 +204,12 @@ class Wordlist:
             return result
 
     def search(self, pattern, length=None, count=10):
+        """
+        Find results matching a given pattern, returning the log probability
+        and the text of each.
+
+        If the length is known, it can be specified as an additional argument.
+        """
         pattern = unspaced_lower(pattern)
         if is_exact(pattern):
             return [self.text_logprob(pattern)]
@@ -232,7 +238,7 @@ class Wordlist:
                     for lprob, ltext in best_partial_results[left_edge]:
                         for rprob, rtext in found:
                             results_this_step.append((
-                                lprob + rprob - log(2),
+                                lprob + rprob - log(10),
                                 ltext + ' ' + rtext
                             ))
             results_this_step.sort(reverse=True)
@@ -500,10 +506,12 @@ class Wordlist:
 
     def show_best_results(self, results, count=20):
         results.sort(reverse=True)
-        print("Log prob.\tCromulence\tText")
-        for logprob, text in results[:count]:
+        print("Log prob.\tCromulence\tText\tInfo")
+        for logprob, text, info in results[:count]:
             cromulence, spaced = self.cromulence(text)
-            print("%4.4f\t%d\t\t%s" % (logprob, cromulence, spaced))
+            if info is None:
+                info = ''
+            print("%4.4f\t%1.1f\t%s\t%s" % (logprob, cromulence, spaced, info))
         return results[0]
 
 

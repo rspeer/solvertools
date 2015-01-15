@@ -1,8 +1,13 @@
+from solvertools.util import data_path
 from solvertools.wordlist import WORDS
-from solvertools.letters import slugify
+from solvertools.normalize import slugify, alphanumeric
 from solvertools.regextools import regex_index, regex_len
 from itertools import permutations
+from natsort import natsorted
 import csv
+import re
+
+ANY = '.+'
 
 
 class RegexClue:
@@ -22,7 +27,7 @@ class RegexClue:
         """
         Get the most likely word that fits this pattern.
         """
-        if self.expr == '.+':
+        if self.expr == ANY:
             # a shortcut for a common case
             return 'THE'
         found = WORDS.search(self.expr, count=1)
@@ -49,12 +54,12 @@ def parse_csv_cell(cell):
     """
     cell = cell.strip()
     if cell == '':
-        return RegexClue('/.+/')
+        return RegexClue(ANY)
     elif cell.startswith('/') and cell.endswith('/'):
         reg = cell[1:-1]
         return RegexClue(reg)
     else:
-        return cell
+        return alphanumeric(cell)
 
 
 def parse_csv_row(row):
@@ -68,7 +73,7 @@ def read_csv_string(string):
 
 def read_csv_file(filename):
     with open(filename, encoding='utf-8') as file:
-        reader = csv.reader(file)
+        reader = csv.reader(file, dialect='excel')
         return [parse_csv_row(row) for row in reader]
 
 
@@ -77,8 +82,14 @@ def diagonalize(items):
     Take the diagonal of a list of words. If the diagonal runs off the end
     of a word, raise an IndexError.
     """
-    # TODO: work with regexes
     return ''.join([items[i][i] for i in range(len(items))])
+
+
+def acrostic(items):
+    """
+    Take the acrostic of a list of words -- the first letter of each word.
+    """
+    return ''.join([item[0] for item in items])
 
 
 def brute_force_diagonalize(answers, wordlist=WORDS, quiet=False):
@@ -133,32 +144,119 @@ def brute_force_diagonalize(answers, wordlist=WORDS, quiet=False):
             logprob, text = found[0]
             slug = slugify(text)
             if slug not in seen:
-                results.append((logprob, text))
+                results.append((logprob, text, None))
                 seen.add(slug)
     return wordlist.show_best_results(results)
 
 
 def resolve(item):
-    if isinstance(item, str):
-        return item
-    else:
+    """
+    Get a non-ambiguous string for each item. If it's uncertain, pick a word,
+    even if it's just THE. This lets us at least try a sort order, although
+    uncertain answers may be out of place.
+    """
+    if isinstance(item, RegexClue):
         return item.resolve()
+    else:
+        if item.isdigit():
+            return int(item)
+        else:
+            return item
 
 
-def _index_everything_into_everything(grid):
-    titles = grid[0]
+def _index_by(indexee, index):
+    if isinstance(index, RegexClue):
+        if index.expr == ANY:
+            return '.'
+        else:
+            raise IndexError
+    else:
+        num = int(index)
+        return indexee[num - 1]
+
+
+def _try_indexing(grid, titles):
     ncols = len(titles)
-    nrows = len(grid) - 1
+    nrows = len(grid)
 
     for sort_col in [None] + list(range(ncols)):
         if sort_col is None:
-            ordered = grid[1:]
+            ordered = grid
+            sort_title = None
         else:
-            sort_keys = [(row, resolve(grid[sort_col][row])) for row in range(1, nrows + 1)]
-            sort_keys.sort(key=lambda x: x[1])
-            ordered = [grid[row] for row, key in sort_keys]
+            sort_keys = [(row, resolve(grid[row][sort_col])) for row in range(nrows)]
+            sorted_keys = natsorted(sort_keys, key=lambda x: x[1])
+            ordered = [grid[row] for row, key in sorted_keys]
+            sort_title = titles[sort_col]
 
         for indexed_col in range(ncols):
-            items = [grid_row[indexed_col] for grid_row in ordered]
-            yield diagonalize(items)
+            column = [grid_row[indexed_col] for grid_row in ordered]
+            try:
+                info = (sort_title, titles[indexed_col], '1ST')
+                yield acrostic(column), info
+                info = (sort_title, titles[indexed_col], 'DIAG')
+                yield diagonalize(column), info
+            except IndexError:
+                pass
+
+            for indexing_col in range(ncols):
+                if indexing_col == indexed_col:
+                    continue
+                indices = [grid_row[indexing_col] for grid_row in ordered]
+                try:
+                    letters = [_index_by(cell, index_cell)
+                               for (cell, index_cell) in zip(column, indices)]
+                    index_result = ''.join(letters)
+                    info = (sort_title, titles[indexed_col], titles[indexing_col])
+                    yield index_result, info
+                except (IndexError, ValueError):
+                    pass
+
+
+def readable_indexing(info):
+    sortby, indexed, indexer = info
+    if sortby is None:
+        sort_part = "Don't sort"
+    else:
+        sort_part = "Sort by %r" % sortby
+
+    if indexer == '1ST':
+        index_part = "take the first letters of"
+    elif indexer == 'DIAG':
+        index_part = "take the diagonal of"
+    else:
+        index_part = "index by %r into" % indexer
+
+    return "%s, %s %s" % (sort_part, index_part, indexed)
+
+
+DIGITS_RE = re.compile(r'[0-9]')
+
+
+def index_all_the_things(grid):
+    titles = grid[0]
+    data = grid[1:]
+    best_logprob = -1000
+    results = []
+    seen = set()
+    for pattern, info in _try_indexing(data, titles):
+        if DIGITS_RE.search(pattern):
+            continue
+        found = WORDS.search(pattern, count=5)
+        for logprob, text in found:
+            if text not in seen:
+                seen.add(text)
+                description = readable_indexing(info)
+                results.append((logprob, text, description))
+                if logprob > best_logprob:
+                    print("\t%2.2f\t%s\t%s" % (logprob, text, description))
+                    best_logprob = logprob
+    print()
+    return WORDS.show_best_results(results)
+
+
+def indexing_demo():
+    filename = data_path('test/soylent_incomplete.csv')
+    grid = read_csv_file(filename)
+    index_all_the_things(grid)
 

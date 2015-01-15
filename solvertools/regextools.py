@@ -170,8 +170,7 @@ def regex_index(regex, index):
     """
     choices = _regex_index_pattern(parse(regex), index)
     if len(choices) == 0:
-        # not exactly sure how this would happen
-        raise ValueError("Reached an impossible situation while indexing a regex")
+        raise IndexError
     elif len(choices) == 1:
         return unparse(choices[0])
     else:

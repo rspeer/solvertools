@@ -283,3 +283,25 @@ Solvertools, we don't have to solve the puzzle.
 
 DELIVERIES is actually the right answer.
 
+
+Index All the Things
+--------------------
+Sometimes a puzzle ends with you having a big spreadsheet of data, and there's
+nothing left to do but to try sorting by everything and indexing everything into
+everything else.
+
+Fortunately, the `index_all_the_things()` function can automate this.
+
+It takes in a table, expressed as a list of lists, and tries everything. The
+`indexing_demo()` function will demonstrate it getting the correct answer on
+the table of data from "Soylent Partners".
+
+The table must have a header row, giving a name to each column.
+
+The table can have a smallish number of missing entries, and some of its entries
+can be uncertain. Uncertain entries should be given as regular expressions between
+slashes. If all you know is that the entry starts with T, write it as `/T.*/`.
+
+Examples of the input appear in `data/test/soylent_partners.csv` and
+`data/test/soylent_incomplete.csv`.
+

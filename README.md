@@ -39,16 +39,21 @@ and/or the docstrings.
 
 But here's an overview of what's in solvertools:
 
-    * `wordlist.py`: a model of words and their likelihood that lots of stuff
-      uses; the "cromulence" measure
+* `wordlist.py`: a model of words and their likelihood that lots of stuff
+    uses; the "cromulence" measure
 
-    * `letters.py`: operations on letters and multisets of letters. Alphagrams,
-      differences between alphagrams, consonantcies, phone-spell.
+* `letters.py`: operations on letters and multisets of letters. Alphagrams,
+    differences between alphagrams, consonantcies, phone-spell.
 
-    * `ciphers.py`: Caesar ciphers (including trying all possibilities), Vigenere
-      ciphers.
+* `ciphers.py`: Caesar ciphers (including trying all possibilities), Vigenere
+    ciphers.
 
-    * `
+* `search.py`: enables searching by clue, or delegating to the wordlist to
+  search by just a pattern.
+
+* `puzzle_structures.py`: solve certain structures of puzzles by brute force,
+  particularly by trying indexing everything into everything
+  (`index_all_the_things`) or trying all the possible diagonals.
 
 There's more stuff in https://github.com/dgulotta/puzzle-tools .
 
@@ -191,10 +196,10 @@ there was a clue.
 
     >>> search('.a.b.c..')[0][1]
     'BARBECUE'
-    >>> search(clue='lincoln assassin', length=15)[0][1]
+    >>> search(clue='Lincoln assassin', length=15)[0][1]
     'JOHN WILKES BOOTH'
-    >>> search(clue='mad, like a punk', length=4)[0][1]
-    'DAFT'
+    >>> search(clue='US president', pattern='.a....e.')[0][1]
+    'VAN BUREN'
 
 
 Examples

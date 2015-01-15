@@ -8,6 +8,6 @@ setup(
     version=VERSION,
     packages=find_packages(),
     install_requires=[
-        'numpy', 'nltk', 'whoosh', 'unidecode'
+        'numpy', 'nltk', 'whoosh', 'unidecode', 'natsort'
     ],
 )

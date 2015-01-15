@@ -142,12 +142,12 @@ function recommend() {
       }
     }
     if (good) {
-      var goodness = letterGoodness(counts, counts2);
-      var wordGoodness = goodness / (1000 + wordIdx);
-      suggestions.push([word, wordGoodness])
+      var cost = letterCost(counts2);
+      var wordCost = cost + wordIdx / 10;
+      suggestions.push([word, wordCost])
     };
   }
-  suggestions.sort(function (a, b) { return b[1] - a[1] });
+  suggestions.sort(function (a, b) { return a[1] - b[1] });
   for (var i=0; i<20; i++) {
     if (suggestions[i]) {
       suggestText += ' '+suggestions[i][0];
@@ -156,7 +156,7 @@ function recommend() {
   suggestCommonElt.textContent = suggestText;
 }
 
-function letterGoodness(counts, counts2) {
+function letterCost(counts2) {
   var score = 0;
   var remain = 0;
   for (var i=0; i<26; i++) {
@@ -165,7 +165,7 @@ function letterGoodness(counts, counts2) {
   if (remain == 0) return 1000000;
   for (var i=0; i<26; i++) {
     prop = counts2[i] / remain;
-    score += Math.pow((1 - prop/freqs[i]), 4);
+    score += Math.pow((1 - prop/freqs[i]), 2);
   }
-  return 1.0 / (score + 0.0001) / remain;
+  return (10 * remain * remain) + score;
 }

@@ -55,6 +55,7 @@
                         </div>
                     </div>
                 </form>
+                <p>(All fields are optional)</p>
                 {% endif %}
 
                 {% if section == 'main' or section == 'anagram' %}
@@ -78,24 +79,18 @@
 
                 {% if section == 'main' %}
                 <h1>Links</h1>
-                <div>
-                    <a href="http://web.mit.edu/puzzle/www/"><strong>Mystery Hunt page</strong></a>
-                </div>
-                <div>
-                    <strong>Our stuff:</strong>
-                    <ul>
-                    <li><a href="http://rotq.net/czar">Czar</a> (our puzzle tracker, maintained by gwillen)</li>
-                    <li><a href="http://github.com/rspeer/solvertools">Solvertools</a> (Python tools by rspeer; runs this site)</li>
-                    <li><a href="http://github.com/dgulotta/puzzle-tools">Puzzletools</a> (more Python tools by dgulotta)</li>
-                    <li><a href="/static/anagrampage/index.html">Interactive anagrammer</a> (by rspeer)</li>
-                    </ul>
-                </div>
-                <div>
-                    <strong>Other stuff:</strong>
-                    <a href="http://www.quinapalus.com/qat.html">Qat</a> ·
-                    <a href="http://nutrimatic.org/">Nutrimatic</a> ·
-                    <a href="http://oneacross.com/">One Across</a>
-                </div>
+                <pre>
+<a href="http://web.mit.edu/puzzle/www/"><strong>Mystery Hunt page</strong></a>
+
+<strong>Our stuff:</strong>
+· <a href="http://rotq.net/czar">Czar</a> (our puzzle tracker, maintained by gwillen)
+· <a href="http://github.com/rspeer/solvertools">Solvertools</a> (Python tools by rspeer; runs this site)
+· <a href="http://github.com/dgulotta/puzzle-tools">Puzzletools</a> (more Python tools by dgulotta)
+· <a href="/static/anagrampage/index.html">Interactive anagrammer</a> (by rspeer)
+
+<strong>Simple wordlist:</strong> <a href="/static/enable2k.txt">ENABLE2K</a> (never use /usr/share/dict/words)
+<strong>Other stuff:</strong> <a href="http://www.quinapalus.com/qat.html">Qat</a> · <a href="http://nutrimatic.org/">Nutrimatic</a> · <a href="http://oneacross.com/">One Across</a>
+                </pre>
                 {% endif %}
 
                 {% if section == 'clue' or section == 'anagram' %}

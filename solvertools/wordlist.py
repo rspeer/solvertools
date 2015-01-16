@@ -215,16 +215,20 @@ class Wordlist:
         for result in self.grep(pattern, length):
             return result
 
-    def search(self, pattern, length=None, count=10):
+    def search(self, pattern, length=None, count=10, use_cromulence=False):
         """
-        Find results matching a given pattern, returning the log probability
+        Find results matching a given pattern, returning the cromulence
         and the text of each.
 
         If the length is known, it can be specified as an additional argument.
         """
         pattern = unspaced_lower(pattern)
         if is_exact(pattern):
-            return [self.text_logprob(pattern)]
+            if use_cromulence:
+                return [self.cromulence(pattern)]
+            else:
+                return [self.text_logprob(pattern)]
+
         minlen, maxlen = regex_len(pattern)
         if minlen != maxlen:
             # If there are variable-length matches, the dynamic programming
@@ -232,30 +236,41 @@ class Wordlist:
             # matches in the wordlist.
             items = list(self.grep(pattern, length=length))
             items.sort(reverse=True)
-            return items[:count]
+            found = items[:count]
+        else:
+            if length is not None and not (minlen <= length <= maxlen):
+                # This length is impossible, so there are no results.
+                return []
 
-        if length is not None and not (minlen <= length <= maxlen):
-            # This length is impossible, so there are no results.
-            return []
+            best_partial_results = [[]]
+            for right_edge in range(1, maxlen + 1):
+                segment = regex_slice(pattern, 0, right_edge)
+                results_this_step = list(islice(self.grep(segment), count))
 
-        best_partial_results = [[]]
-        for right_edge in range(1, maxlen + 1):
-            segment = regex_slice(pattern, 0, right_edge)
-            results_this_step = list(islice(self.grep(segment), count))
+                for left_edge in range(1, right_edge):
+                    if best_partial_results[left_edge]:
+                        segment = regex_slice(pattern, left_edge, right_edge)
+                        found = list(islice(self.grep(segment), count))
+                        for lprob, ltext in best_partial_results[left_edge]:
+                            for rprob, rtext in found:
+                                results_this_step.append((
+                                    lprob + rprob - log(10),
+                                    ltext + ' ' + rtext
+                                ))
+                results_this_step.sort(reverse=True)
+                best_partial_results.append(results_this_step[:count])
+            found = best_partial_results[-1]
 
-            for left_edge in range(1, right_edge):
-                if best_partial_results[left_edge]:
-                    segment = regex_slice(pattern, left_edge, right_edge)
-                    found = list(islice(self.grep(segment), count))
-                    for lprob, ltext in best_partial_results[left_edge]:
-                        for rprob, rtext in found:
-                            results_this_step.append((
-                                lprob + rprob - log(10),
-                                ltext + ' ' + rtext
-                            ))
-            results_this_step.sort(reverse=True)
-            best_partial_results.append(results_this_step[:count])
-        return best_partial_results[-1]
+        if not use_cromulence:
+            return found
+        else:
+            results = []
+            for (logprob, text) in found:
+                cromulence = self.logprob_to_cromulence(logprob, len(slugify(text)))
+                results.append((cromulence, text))
+            results.sort(reverse=True)
+            return results
+
 
     def _iter_query(self, query, params=()):
         c = self.db.cursor()
@@ -540,7 +555,7 @@ def wordlist_db_connection(filename):
     have been built.)
     """
     os.makedirs(db_path(''), exist_ok=True)
-    return sqlite3.connect(db_path(filename))
+    return sqlite3.connect(db_path(filename), check_same_thread=False)
 
 
 def read_wordlist(name):

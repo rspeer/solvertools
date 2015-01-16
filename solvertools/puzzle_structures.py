@@ -120,23 +120,23 @@ def brute_force_diagonalize(answers, wordlist=WORDS, quiet=False):
         -19.4797    15.3    MENOROT 
         -19.8101    14.9    BE NOISY    
         -19.9530    14.8    DELLROY 
-        -20.3282    14.3    RUN EAST    
+        -20.3282    14.4    RUN EAST    
         -21.3154    13.3    MIX LAST    
         -21.3333    13.3    MAX LAST    
-        -21.4507    13.1    LES LIST    
+        -21.4507    13.2    LES LIST    
         -21.4619    13.1    RUN SALT    
         -21.5178    13.1    LAS LAST    
-        -21.5394    13.0    BOX STAY    
-        -21.6241    12.9    MENOGYN 
+        -21.5394    13.1    BOX STAY    
+        -21.6241    13.0    MENOGYN 
         -22.2569    12.3    MALORY I    
         -22.3489    12.2    BUS LIST    
         -22.4141    12.1    LINE TO I   
-        -22.6454    11.8    LIN LAST    
+        -22.6454    11.9    LIN LAST    
         -22.9501    11.5    DEAL ROY    
         -22.9835    11.5    ME NOT AN   
         -23.2088    11.2    RUNS RAY    
         -23.2311    11.2    MUS LAST    
-        -23.3860    11.0    BE SO IST   
+        -23.3860    11.1    BE SO IST   
         (-19.479680042263826, 'MENOROT', None)
 
     Okay, it actually thinks the best answer is "MENOROT", the plural of

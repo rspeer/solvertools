@@ -11,6 +11,7 @@ from solvertools.letters import (
 )
 from solvertools.normalize import slugify
 import itertools
+import time
 
 
 letters_to_try = 'etaoinshrdlucympbgfvxwkjzq'
@@ -47,7 +48,7 @@ def interleave(iteriter):
                 del seen_iters[i]        
 
 
-def eval_anagrams(gen, wordlist, count, quiet=False):
+def eval_anagrams(gen, wordlist, count, quiet=False, time_limit=None):
     """
     The final step in anagramming. Given a generator of anagrams, `gen`,
     extract their readable text with spaces, get a reasonable number of
@@ -55,10 +56,9 @@ def eval_anagrams(gen, wordlist, count, quiet=False):
     sort them by their cromulence (see wordlist.py).
 
     The results are printed as they are encountered, and at the end, the top
-    `count` are returned from worst to best. The advantage of worst-to-best
-    order is that, at an interactive prompt, the best anagrams will land at
-    the bottom of the screen, and you can scroll up to see the worst ones.
+    `count` are returned from best to worst.
     """
+    start_time = time.monotonic()
     results = []
     used = set()
     best_logprob = -1000
@@ -74,9 +74,11 @@ def eval_anagrams(gen, wordlist, count, quiet=False):
             results.append((cromulence, logprob, text))
             if len(results) >= count * 5:
                 break
+            if time_limit and (time.monotonic() - start_time > time_limit):
+                break
             used.add(textblob)
-    results.sort()
-    return [(cromulence, text) for (cromulence, logprob, text) in results[-count:]]
+    results.sort(reverse=True)
+    return [(cromulence, text) for (cromulence, logprob, text) in results[:count]]
 
 
 def anagram_single(text, wildcards=0, wordlist=WORDS, count=10, quiet=True):
@@ -117,14 +119,14 @@ def adjusted_anagram_cost(item):
         raise ValueError
 
 
-def anagram_double(text, wildcards=0, wordlist=WORDS, count=100):
+def anagram_double(text, wildcards=0, wordlist=WORDS, count=100, quiet=False):
     """
     Search for anagrams that can be made of two words or phrases from the
     wordlist.
     """
     return eval_anagrams(
         _anagram_double(alphagram(slugify(text)), wildcards, wordlist),
-        wordlist, count
+        wordlist, count, quiet=quiet
     )
 
 
@@ -155,14 +157,14 @@ def _anagram_double_piece(slug1, alpha2, wildcards_remaining, wordlist):
         yield slug1 + slug2
 
 
-def anagrams(text, wildcards=0, wordlist=WORDS, count=100):
+def anagrams(text, wildcards=0, wordlist=WORDS, count=100, quiet=False, time_limit=None):
     """
     Search for anagrams that are made of an arbitrary number of pieces from the
     wordlist.
     """
     return eval_anagrams(
         _anagram_recursive(alphagram(slugify(text)), wildcards, wordlist),
-        wordlist, count
+        wordlist, count, quiet=quiet, time_limit=time_limit
     )
 
 

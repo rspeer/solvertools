@@ -23,7 +23,10 @@ def search(pattern=None, clue=None, length=None, count=20):
     """
     global INDEX, QUERY_PARSER
     if clue is None:
-        return WORDS.search(pattern)
+        if pattern is None:
+            return []
+        else:
+            return WORDS.search(pattern, count=count, use_cromulence=True)
 
     if pattern is not None:
         pattern = pattern.lstrip('^').rstrip('$').lower()

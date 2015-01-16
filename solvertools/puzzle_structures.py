@@ -147,7 +147,7 @@ def brute_force_diagonalize(answers, wordlist=WORDS, quiet=False):
     """
     results = []
     seen = set()
-    answers = [slugify(word) for word in answers]
+    answers = [parse_cell(word) for word in answers]
     for i, permutation in enumerate(permutations(answers)):
         if not quiet and i > 0 and i % 10000 == 0:
             print("Tried %d permutations" % i)

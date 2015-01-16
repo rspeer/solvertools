@@ -302,6 +302,30 @@ The table can have a smallish number of missing entries, and some of its entries
 can be uncertain. Uncertain entries should be given as regular expressions between
 slashes. If all you know is that the entry starts with T, write it as `/T.*/`.
 
-Examples of the input appear in `data/test/soylent_partners.csv` and
-`data/test/soylent_incomplete.csv`.
+Here's an example of loading data from the puzzle "Soylent Partners", with some
+entries left incomplete. (You can see the data in
+`data/test/soylent_incomplete.csv`, or the completed version in
+`data/test/soylent_partners.csv`.)
 
+It will show the current best result as it searches, then both print and return
+the `count` best answers.
+
+    >>> puz = read_csv_file(data_path('test/soylent_incomplete.csv'))
+    >>> index_all_the_things(puz, count=3)
+        -52.24  ACTOR CM TABLS YOU  Don't sort, take the first letters of 'colorname'
+        -40.75  LC MARC NOBUO SATO  Don't sort, index by 'inspector' into 'colorname'
+        -38.59  SHOULD NABUCCO NA   Sort by 'colorname', index by 'inspector' into 'colorname'
+        -38.14  BEMOANS THE AUCOC   Sort by 'cluea', index by 'inspector' into 'colorname'
+        -35.05  SUCH A BISON SUCH A Sort by 'clueb', index by 'inspector' into 'colorname'
+        -25.79  RAINBOW CACTUS OF   Sort by 'columnorder', index by 'inspector' into 'colorname'
+
+    Log prob.   Cromulence  Text    Info
+    -25.7857    22.4    RAINBOW CACTUS OF   Sort by 'columnorder', index by 'inspector' into 'colorname'
+    -26.2560    22.2    RAINBOW CACTUS TO   Sort by 'columnorder', index by 'inspector' into 'colorname'
+    -26.3918    22.1    RAINBOW CACTUS IN   Sort by 'columnorder', index by 'inspector' into 'colorname'
+[(-25.785671522045277, 'RAINBOW CACTUS OF', "Sort by 'columnorder', index by 'inspector' into 'colorname'"),
+ (-26.2559966671154, 'RAINBOW CACTUS TO', "Sort by 'columnorder', index by 'inspector' into 'colorname'"),
+ (-26.39179329162168, 'RAINBOW CACTUS IN', "Sort by 'columnorder', index by 'inspector' into 'colorname'")]
+
+The actual answer is `RAINBOW CACTUSES`, which it gets exactly if it's given
+`soylent_partners.csv` instead.

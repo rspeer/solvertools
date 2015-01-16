@@ -7,9 +7,6 @@ from natsort import natsorted
 import csv
 import re
 
-ANY = '.+'
-
-
 class RegexClue:
     """
     A wrapper for answers that are indicated to be regular expressions.
@@ -27,7 +24,7 @@ class RegexClue:
         """
         Get the most likely word that fits this pattern.
         """
-        if self.expr == ANY:
+        if self.expr == '.+':
             # a shortcut for a common case
             return 'THE'
         found = WORDS.search(self.expr, count=1)
@@ -39,11 +36,28 @@ class RegexClue:
     def __len__(self):
         return regex_len(self.expr)
 
+    def __eq__(self, other):
+        if type(self) != type(other):
+            return False
+        return self.expr == other.expr
+
+    def __ne__(self, other):
+        return not (self == other)
+
     def __str__(self):
-        return "/%s/" % self.expr
+        if self.expr == '.+':
+            return "ANY"
+        else:
+            return "/%s/" % self.expr
 
     def __repr__(self):
-        return "RegexClue(%s)" % self.expr
+        if self.expr == '.+':
+            return "ANY"
+        else:
+            return "RegexClue(%r)" % self.expr
+
+
+ANY = RegexClue('.+')
 
 
 def parse_csv_cell(cell):
@@ -54,7 +68,7 @@ def parse_csv_cell(cell):
     """
     cell = cell.strip()
     if cell == '':
-        return RegexClue(ANY)
+        return ANY
     elif cell.startswith('/') and cell.endswith('/'):
         reg = cell[1:-1]
         return RegexClue(reg)
@@ -163,7 +177,7 @@ def resolve(item):
 
 def _index_by(indexee, index):
     if isinstance(index, RegexClue):
-        if index.expr == ANY:
+        if index == ANY:
             return '.'
         else:
             raise IndexError
@@ -224,13 +238,13 @@ def readable_indexing(info):
     else:
         index_part = "index by %r into" % indexer
 
-    return "%s, %s %s" % (sort_part, index_part, indexed)
+    return "%s, %s %r" % (sort_part, index_part, indexed)
 
 
 DIGITS_RE = re.compile(r'[0-9]')
 
 
-def index_all_the_things(grid):
+def index_all_the_things(grid, count=20):
     """
     Try every combination of sorting by one column and indexing another column,
     possibly by the numeric values in a third column.
@@ -240,7 +254,7 @@ def index_all_the_things(grid):
     data = []
     for row in grid[1:]:
         if len(row) < ncols:
-            row = row + [RegexClue(ANY)] * (ncols - len(row))
+            row = row + [ANY] * (ncols - len(row))
         data.append(row)
     best_logprob = -1000
     results = []
@@ -258,7 +272,7 @@ def index_all_the_things(grid):
                     print("\t%2.2f\t%s\t%s" % (logprob, text, description))
                     best_logprob = logprob
     print()
-    return WORDS.show_best_results(results)
+    return WORDS.show_best_results(results, count)
 
 
 def indexing_demo():

@@ -60,12 +60,14 @@ class RegexClue:
 ANY = RegexClue('.+')
 
 
-def parse_csv_cell(cell):
+def parse_cell(cell):
     """
     Handle some special syntax. A cell can contain a regex surrounded with
     slashes, in which case it will be interpreted as a regex. Or it can be
     the empty string, in which case it will match any word.
     """
+    if isinstance(cell, RegexClue):
+        return cell
     cell = cell.strip()
     if cell == '':
         return ANY
@@ -77,7 +79,7 @@ def parse_csv_cell(cell):
 
 
 def parse_csv_row(row):
-    return [parse_csv_cell(cell) for cell in row]
+    return [parse_cell(cell) for cell in row]
 
 
 def read_csv_string(string):
@@ -254,8 +256,8 @@ def index_all_the_things(grid, count=20):
     data = []
     for row in grid[1:]:
         if len(row) < ncols:
-            row = row + [ANY] * (ncols - len(row))
-        data.append(row)
+            row = row + [''] * (ncols - len(row))
+        data.append([parse_cell(cell) for cell in row])
     best_logprob = -1000
     results = []
     seen = set()

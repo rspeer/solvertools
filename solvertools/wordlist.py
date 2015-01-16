@@ -533,12 +533,12 @@ class Wordlist:
 
     def show_best_results(self, results, count=20):
         results.sort(reverse=True)
-        print("Log prob.\tCromulence\tText\tInfo")
+        print("Cromulence\tText\tInfo")
         for logprob, text, info in results[:count]:
             cromulence, spaced = self.cromulence(text)
             if info is None:
                 info = ''
-            print("%4.4f\t%1.1f\t%s\t%s" % (logprob, cromulence, spaced, info))
+            print("%1.1f\t%s\t%s" % (cromulence, spaced, info))
         return results[:count]
 
 

@@ -262,7 +262,7 @@ def index_all_the_things(grid, count=20):
     for pattern, info in _try_indexing(data, titles):
         if DIGITS_RE.search(pattern):
             continue
-        found = WORDS.search(pattern, count=5)
+        found = WORDS.search(pattern, count=5, use_cromulence=True)
         for logprob, text in found:
             if text not in seen:
                 seen.add(text)

@@ -2,6 +2,12 @@ Prerequisites
 =============
 You need Python 3.3+, Make, and GNU tools such as 'grep' and 'sort'.
 
+To set up Solvertools, run `setup.py develop` (not `install`) in your
+appropriately-configured Python environment.
+
+Getting an appropriately-configured Python environment
+------------------------------------------------------
+
 The best way to install Python packages is in a virtual environment,
 which points `python` in your shell to a local copy. On many systems, you
 could run:
@@ -27,8 +33,10 @@ After this, to set up the wordlists, run:
 
     make
 
-...and wait for maybe an hour. (Copying the built data from someone else
-on a USB drive is also an option.)
+...and wait for maybe an hour while arbitrary words print to your screen
+a lot. (That's how you know it's doing something.)
+
+Copying the built data from someone else on a USB drive is also an option.
 
 One person (Paul) has possibly made this work on Windows, but you need a
 terminal that supports UTF-8, because I'm not going to hunt down all the things

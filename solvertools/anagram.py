@@ -101,10 +101,18 @@ def _anagram_single(alpha, wildcards, wordlist):
         return
     if wildcards == 0:
         yield from wordlist.find_by_alphagram_raw(alpha)
-    else:
+    elif wildcards > 0:
         for seq in itertools.combinations(letters_to_try, wildcards):
             newalpha = alphagram(alpha + ''.join(seq))
             yield from wordlist.find_by_alphagram_raw(newalpha)
+    elif wildcards < 0:
+        selection_size = len(alpha) + wildcards
+        if selection_size == 0:
+            yield ''
+        elif selection_size >= 0:
+            for newalpha_seq in itertools.combinations(alpha, selection_size):
+                newalpha = ''.join(newalpha_seq)
+                yield from _anagram_single(newalpha, 0, wordlist)
 
 
 def adjusted_anagram_cost(item):
@@ -113,10 +121,7 @@ def adjusted_anagram_cost(item):
     anagrams.
     """
     used, letters, wildcards, index = item
-    if wildcards >= 0:
-        return anagram_cost(letters) / (wildcards + 1) * (index + 1)
-    else:
-        raise ValueError
+    return anagram_cost(letters) / (max(0, wildcards) + 1) * (index + 1)
 
 
 def anagram_double(text, wildcards=0, wordlist=WORDS, count=100, quiet=False):
@@ -142,7 +147,7 @@ def _anagram_double_2(alpha, wildcards, wordlist):
         (sub, adiff, wildcards - wildcards_used, index)
         for index, sub in enumerate(wordlist.find_sub_alphagrams(alpha, wildcard=(wildcards > 0)))
         for adiff, wildcards_used in [anagram_diff(alpha, alphabytes_to_alphagram(sub))]
-        if wildcards >= wildcards_used
+        if wildcards >= wildcards_used or (wildcards < 0 and wildcards_used == 0)
     ]
 
     sub_anas.sort(key=adjusted_anagram_cost)
@@ -192,7 +197,7 @@ def _anagram_recursive_piece_1(alpha, wildcards, wordlist, ahash):
         (sub, adiff, wildcards - wildcards_used, index)
         for index, sub in enumerate(wordlist.find_by_anahash_raw(ahash))
         for adiff, wildcards_used in [anagram_diff(alpha, alphagram(sub))]
-        if wildcards >= wildcards_used
+        if wildcards >= wildcards_used or (wildcards < 0 and wildcards_used == 0)
     ]
     sub_anas.sort(key=adjusted_anagram_cost)
 

@@ -131,11 +131,11 @@ def anagram_double(text, wildcards=0, wordlist=WORDS, count=100, quiet=False):
 
 
 def _anagram_double(alpha, wildcards, wordlist):
-    return interleave(_anagram_double_2(alpha, wildcards, wordlist))
+    yield from _anagram_single(alpha, wildcards, wordlist)
+    yield from interleave(_anagram_double_2(alpha, wildcards, wordlist))
 
 
 def _anagram_double_2(alpha, wildcards, wordlist):
-    yield _anagram_single(alpha, wildcards, wordlist)
     if len(alpha) >= 25:
         return
     sub_anas = [

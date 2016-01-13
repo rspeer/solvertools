@@ -1,0 +1,19 @@
+server {
+    listen 80;
+    server_tokens off;
+    server_name www.ireproof.org ireproof.org;
+
+     location / {
+         include uwsgi_params;
+         uwsgi_pass unix:/var/run/uwsgi/app/ireproof/socket;
+     }
+
+     location /static {
+         alias /home/rspeer/solvertools/solvertools/web/static;
+     }
+
+     ## Only requests to our Host are allowed
+     if ($host !~ ^(ireproof.org|www.ireproof.org)$ ) {
+        return 444;
+     }
+}

@@ -54,22 +54,22 @@ def init_search_index():
                     )
 
     # Add crossword clues
-    for line in open(corpus_path('crossword_clues.txt'), encoding='utf-8'):
-        text, defn = line.rstrip().split('\t')
-        slug = slugify(text)
-        print(text, defn)
-        writer.add_document(
-            slug=slug,
-            text=text,
-            definition=defn,
-            length=len(slug)
-        )
+    for corpus in ('crossword_clues.txt', 'more_crossword_clues.txt'):
+        for line in open(corpus_path(corpus), encoding='utf-8'):
+            text, defn = line.rstrip().split('\t')
+            slug = slugify(text)
+            print(text, defn)
+            writer.add_document(
+                slug=slug,
+                text=text,
+                definition=defn,
+                length=len(slug)
+            )
 
     # Add WordNet glosses and links
     synsets = wordnet.all_synsets()
     for syn in synsets:
         lemmas = [lem.replace('_', ' ') for lem in syn.lemma_names()]
-        slugs = [slugify(lemma) for lemma in lemmas]
         related = [lem.replace('_', ' ') for lem in get_adjacent(syn)]
         related2 = lemmas + related
         links = ', '.join(related2).upper()

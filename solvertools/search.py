@@ -9,6 +9,25 @@ INDEX = None
 QUERY_PARSER = None
 
 
+def simple_parser(fieldname, schema, group, **kwargs):
+    """
+    Returns a QueryParser configured to support only +, -, and phrase
+    syntax.
+
+    Modified from Whoosh's SimpleParser to accept a custom 'group'
+    argument.
+    """
+
+    pins = [qparser.plugins.WhitespacePlugin,
+            qparser.plugins.PlusMinusPlugin,
+            qparser.plugins.PhrasePlugin]
+    orgroup = qparser.syntax.OrGroup
+    return qparser.QueryParser(
+        fieldname, schema, plugins=pins, group=orgroup,
+        **kwargs
+    )
+
+
 def search(pattern=None, clue=None, length=None, count=20):
     """
     Find words and phrases that match various criteria: a regex pattern,
@@ -34,8 +53,8 @@ def search(pattern=None, clue=None, length=None, count=20):
 
     if INDEX is None:
         INDEX = open_dir(data_path('search'))
-        QUERY_PARSER = qparser.SimpleParser(
-            "definition", schema=INDEX.schema,
+        QUERY_PARSER = simple_parser(
+            fieldname="definition", schema=INDEX.schema,
             group=qparser.OrGroup.factory(0.9)
         )
         QUERY_PARSER.add_plugin(qparser.GroupPlugin())

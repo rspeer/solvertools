@@ -1,6 +1,7 @@
-from flask import Flask, render_template, request, redirect
+from flask import Flask, render_template, request, redirect, Response
 from solvertools.search import search
 from solvertools.anagram import anagrams
+import re
 app = Flask(__name__)
 
 
@@ -32,6 +33,76 @@ def search_page():
             'main.html', section='clue', error=str(e),
             pattern=pattern, clue=clue, length=length
         )
+
+
+def _render_search_results(caption, search_results):
+    results = '\n'.join('% 4.1f  %s' % (item[0], item[1]) for item in search_results)
+    return 'Results for: {}\n{}'.format(caption, results)
+
+
+@app.route('/api/pattern')
+@app.route('/api/pattern/')
+def pattern_api():
+    text = request.args.get('text')
+    if not text:
+        response = "Type /pattern followed by the regex to search for, such as '/pattern .a.b.c..'"
+    else:
+        search_results = search(pattern=text.strip('/'), count=16)
+        response = _render_search_results(text.strip('/'), search_results)
+    return Response(response, mimetype='text/plain')
+
+
+PATTERN_RE = re.compile(r'/([^/]+)/$')
+ENUMERATION_RE = re.compile(r'\(([0-9]+)\)$')
+
+
+@app.route('/api/clue')
+@app.route('/api/clue/')
+def clue_api():
+    text = request.args.get('text').strip()
+    if not text:
+        response = "Type /clue followed by the clue text to look up, such as '/clue Lincoln assassin (15)' or '/clue meat /.a.b..../'"
+    else:
+        pattern = None
+        length = None
+        clue = text
+        match = PATTERN_RE.search(text)
+        if match:
+            clue = text[:match.start()].strip()
+            pattern = match.group(1)
+        
+        match = ENUMERATION_RE.search(text)
+        if match:
+            clue = text[:match.start()].strip()
+            length = int(match.group(1))
+
+        search_results = search(clue=clue, pattern=pattern, length=length)
+        response = _render_search_results(text, search_results)
+    return Response(response, mimetype='text/plain')
+
+
+@app.route('/api/anagram')
+@app.route('/api/anagram/')
+def anagram_api():
+    text = request.args.get('text').strip()
+    if not text:
+        response = "Type /anagram followed by letters to anagram. You can add or subtract letters: '/anagram warehouse+2' or '/anagram warehouse-1'"
+    else:
+        wildcards = 0
+        if '+' in text:
+            letters, wildcard_str = text.split('+', 1)
+            wildcards = int(wildcard_str)
+        elif '-' in text:
+            letters, wildcard_str = text.split('-', 1)
+            wildcards = -(int(wildcard_str))
+        elif '.' in text:
+            letters = ''.join(let for let in text if let != '.')
+            wildcards = text.count('.')
+        else:
+            letters = text
+        found_anagrams = anagrams(letters, wildcards, count=15, quiet=True, time_limit=1.5)
+        response = _render_search_results(text, found_anagrams)
+    return Response(response, mimetype='text/plain')
 
 
 @app.route('/anagram')

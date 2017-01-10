@@ -2,7 +2,11 @@
 Wacky tools for slicing and dicing regexes.
 """
 from sre_parse import parse, CATEGORIES, SPECIAL_CHARS, SubPattern
-from sre_constants import MAXREPEAT
+from sre_constants import MAXREPEAT   # this is a quantity, not an enum
+from sre_constants import (
+    MAX_REPEAT, LITERAL, IN, CATEGORY, ANY, SUBPATTERN, BRANCH,
+    AT_BEGINNING, AT_END
+)
 import re
 
 
@@ -52,8 +56,8 @@ def is_exact(string):
 def _wrap_branches(struct):
     result = []
     for op, data in struct:
-        if op == 'branch':
-            result.append( ('subpattern', (1, [(op, data)])) )
+        if op == BRANCH:
+            result.append( (SUBPATTERN, (1, [(op, data)])) )
         else:
             result.append( (op, data) )
     return result
@@ -61,22 +65,22 @@ def _wrap_branches(struct):
 
 def regex_len(regex):
     """
-    Returns a tuple of the minimum and maximum possible length string that
-    a regex will match. Returns MAXREPEAT (2**32 - 1) if a match can be
-    very or infinitely long.
+    Returns a tuple of the minimum and maximum possible length string that a
+    regex will match. Returns MAXREPEAT if a match can be very or infinitely
+    long.
 
         >>> regex_len('test')
         (4, 4)
         >>> regex_len('t.st')
         (4, 4)
         >>> regex_len('.*')
-        (0, 4294967295)
+        (0, MAXREPEAT)
         >>> regex_len('fo?o')
         (2, 3)
         >>> regex_len('mo{2,7}')
         (3, 8)
         >>> regex_len('(foo)+')
-        (3, 4294967295)
+        (3, MAXREPEAT)
         >>> regex_len('s?e?q?u?e?n?c?e?')
         (0, 8)
     """
@@ -100,20 +104,20 @@ def _regex_len_pattern(pattern):
     "Returns the minimum and maximum length of a parsed regex pattern."
     lo = hi = 0
     for op, data in pattern:
-        if op in ('literal', 'in', 'category', 'any'):
+        if op in (LITERAL, IN, CATEGORY, ANY):
             sub_lo = sub_hi = 1
-        elif op == 'subpattern':
+        elif op == SUBPATTERN:
             sub_lo, sub_hi = _regex_len_pattern(data[1])
-        elif op == 'branch':
+        elif op == BRANCH:
             sub_lo, sub_hi = _regex_len_branch(data[1])
-        elif op == 'max_repeat':
+        elif op == MAX_REPEAT:
             sub_lo, sub_hi = _regex_len_repeat(data)
-        elif op == 'at':
+        elif op == AT:
             sub_lo = sub_hi = 0
         else:
             raise ValueError(
-                "I don't know what to do with this regex operation: %s, %s"
-                % (op, data)
+                "I don't know what to do with this regex operation: %s %s, %s"
+                % (op, type(op), data)
             )
         lo += sub_lo
         hi += sub_hi
@@ -174,7 +178,7 @@ def regex_index(regex, index):
     elif len(choices) == 1:
         return unparse(choices[0])
     else:
-        return round_trip(unparse(('branch', (None, choices))))
+        return round_trip(unparse((BRANCH, (None, choices))))
 
 
 def _regex_index(struct, index):
@@ -182,16 +186,16 @@ def _regex_index(struct, index):
         return _regex_index_pattern(struct, index)
     else:
         opcode, data = struct
-        if opcode in ('literal', 'in', 'category', 'any'):
+        if opcode in (LITERAL, IN, CATEGORY, ANY):
             if index == 0:
                 return [[struct]]
             else:
                 return []
-        elif opcode == 'subpattern':
+        elif opcode == SUBPATTERN:
             return _regex_index_pattern(data[1], index)
-        elif opcode == 'branch':
+        elif opcode == BRANCH:
             return _regex_index_branch(data[1], index)
-        elif opcode == 'max_repeat':
+        elif opcode == MAX_REPEAT:
             return _regex_index_repeat(data, index)
         else:
             raise ValueError("I don't know what to do with this regex: "
@@ -225,7 +229,7 @@ def regex_slice(expr, start, end):
             regex = unparse(choices[0])
             result += regex
         else:
-            regex = round_trip(unparse(('branch', (None, choices))))
+            regex = round_trip(unparse((BRANCH, (None, choices))))
             if '|' in regex:
                 result += '(%s)' % (regex,)
             else:
@@ -288,10 +292,11 @@ def unparse(struct):
         return ''.join(unparse(x) for x in struct)
     elif isinstance(struct, tuple):
         opcode, data = struct
+        func_name = '_unparse_%s' % str(opcode).lower()
         if str(struct) in REVERSE_CATEGORIES:
             return REVERSE_CATEGORIES[str(struct)]
-        elif '_unparse_%s' % opcode in globals():
-            unparser = globals()['_unparse_%s' % opcode]
+        elif func_name in globals():
+            unparser = globals()[func_name]
             return unparser(data)
         else:
             raise ValueError("I don't know what to do with this regex: "
@@ -347,9 +352,9 @@ def _unparse_max_repeat(data):
 
 
 def _unparse_at(data):
-    if data == 'at_beginning':
+    if data == AT_BEGINNING:
         return '^'
-    elif data == 'at_end':
+    elif data == AT_END:
         return '$'
     else:
         raise ValueError

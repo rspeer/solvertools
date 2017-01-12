@@ -2,7 +2,7 @@ from solvertools.wordlist import WORDS
 from solvertools.normalize import slugify
 from solvertools.util import data_path, corpus_path
 from whoosh.fields import Schema, ID, TEXT, KEYWORD, NUMERIC
-from whoosh.analysis import StemmingAnalyzer
+from whoosh.analysis import StandardAnalyzer
 from whoosh.index import create_in
 import nltk
 import os
@@ -10,8 +10,8 @@ import os
 
 schema = Schema(
     slug=ID,
-    text=TEXT(stored=True, analyzer=StemmingAnalyzer()),
-    definition=TEXT(stored=True, analyzer=StemmingAnalyzer()),
+    text=TEXT(stored=True, analyzer=StandardAnalyzer()),
+    definition=TEXT(stored=True, analyzer=StandardAnalyzer()),
     length=NUMERIC
 )
 
@@ -20,7 +20,7 @@ def init_search_index():
     nltk.download('wordnet')
     from nltk.corpus import wordnet
     get_synset = wordnet._synset_from_pos_and_offset
-    
+
     def get_adjacent(synset):
         return [
             name

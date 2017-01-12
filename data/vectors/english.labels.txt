@@ -1,24 +1,24 @@
-#####ish
-####ed
-####s
-####th
-###.##e
-###.##i
-###er
-###s
-###st
-###th
-###z
-##base#
-##er
-##mo
-##nd
-##rd
-##s
-##st
-##th
-##x
-##º
+00000ish
+0000ed
+0000s
+0000th
+000.00e
+000.00i
+000er
+000s
+000st
+000th
+000z
+00base0
+00er
+00mo
+00nd
+00rd
+00s
+00st
+00th
+00x
+00º
 0
 0 0
 0 fer
@@ -835,9 +835,9 @@
 9yr
 9yrs
 a
-a##
-a###
-a##y
+a00
+a000
+a00y
 a'court
 a'la
 a.a
@@ -1068,7 +1068,7 @@ aau
 aaup
 aauw
 aav
-aav##
+aav00
 aava
 aave
 aaw
@@ -2013,7 +2013,7 @@ abyssinians
 abz
 abzug
 ac
-ac##
+ac00
 ac1
 ac2
 ac3
@@ -37253,7 +37253,7 @@ bündchen
 büyük
 bу
 c
-c##
+c00
 c'mere
 c'mon
 c.b
@@ -60002,11 +60002,11 @@ côte des neiges
 côté
 cüneyt
 d
-d##
-d###
-d####
-d##d
-d##w
+d00
+d000
+d0000
+d00d
+d00w
 d'ya
 d'ye
 d'you
@@ -74239,8 +74239,8 @@ dürer
 düsseldorf
 düzce
 e
-e###
-e###b
+e000
+e000b
 e's
 e.coli
 e.d
@@ -81254,7 +81254,7 @@ eszter
 esztergom
 eszterhas
 et
-et###
+et000
 et.al
 et3
 et al
@@ -83733,7 +83733,7 @@ ezzat
 ezzell
 ezzy
 f
-f####
+f0000
 f.b.i
 f.c
 f.d.a
@@ -85265,7 +85265,7 @@ fasttrack
 fastweb
 fasulo
 fat
-fat##
+fat00
 fat cat
 fat cats
 fat loss
@@ -94277,8 +94277,8 @@ fürst
 fürth
 fœtus
 g
-g##
-g##n
+g00
+g00n
 g'day
 g'night
 g.i
@@ -117704,7 +117704,7 @@ hülya
 hüseyin
 hüsnü
 i
-i##n
+i00n
 i'd
 i'd've
 i'll
@@ -118244,7 +118244,7 @@ icx
 icy
 iczm
 id
-id##t
+id00t
 id1
 id2
 id3
@@ -138768,9 +138768,9 @@ kütahya
 kırklareli
 kω
 l
-l###
-l##n
-l##t
+l000
+l00n
+l00t
 l.a
 l.ed
 l.l.c
@@ -141704,7 +141704,7 @@ lcw
 lcx
 lcy
 ld
-ld##
+ld00
 lda
 ldap
 ldb
@@ -149479,11 +149479,11 @@ lúcio
 lübeck
 lüneburg
 m
-m##
-m###
-m####
-m####a#
-m##n
+m00
+m000
+m0000
+m0000a0
+m00n
 m'kay
 m'lady
 m'liss
@@ -169330,8 +169330,8 @@ münster
 müssen
 māori
 n
-n##
-n##b
+n00
+n00b
 n'diaye
 n'djamena
 n'dour
@@ -183699,8 +183699,8 @@ ozzy
 ozzy osbourne
 où
 p
-p##
-p##n
+p00
+p00n
 p'tit
 p.a
 p.c
@@ -190582,7 +190582,7 @@ pgt
 pgw
 pgy
 ph
-ph##r
+ph00r
 ph.d
 ph.ds
 pha
@@ -216755,7 +216755,7 @@ röyksopp
 rügen
 rīga
 s
-s####d
+s0000d
 s'more
 s'mores
 s'pore
@@ -216804,7 +216804,7 @@ s style
 s tronic
 s w
 sa
-sa##
+sa00
 sa1
 sa2
 sa ad
@@ -255302,7 +255302,7 @@ tpy
 tq
 tqm
 tr
-tr##
+tr00
 tr1
 tr2
 tr3
@@ -259330,7 +259330,7 @@ twenties
 twentieth
 twentieth century
 twenty
-twenty##
+twenty00
 twenty somethings
 twentyfive
 twentyfold
@@ -269914,7 +269914,7 @@ véronique
 vía
 víctor
 w
-w##t
+w00t
 w.d
 w.h.o
 w.va
@@ -277884,7 +277884,7 @@ würde
 württemberg
 würzburg
 x
-x##
+x00
 x'mas
 x.org
 x0
@@ -278452,7 +278452,7 @@ xyz
 xz
 xzibit
 y
-y#k##
+y0k00
 y'know
 y'see
 y.o

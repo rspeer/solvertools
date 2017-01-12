@@ -1,12 +1,16 @@
 from solvertools.wordlist import WORDS
 from solvertools.normalize import slugify, sanitize
 from solvertools.util import data_path
+from wordfreq import tokenize
 from whoosh.index import open_dir
 from whoosh import qparser
+from operator import itemgetter
+from .conceptnet_numberbatch import load_numberbatch, get_vector, similar_to_term
 import re
 
 INDEX = None
 QUERY_PARSER = None
+NUMBERBATCH = None
 
 
 def simple_parser(fieldname, schema, group, **kwargs):
@@ -28,6 +32,20 @@ def simple_parser(fieldname, schema, group, **kwargs):
     )
 
 
+def query_expand(numberbatch, words):
+    weighted_words = []
+    for word in words:
+        similar = similar_to_term(numberbatch, word, limit=25)
+        weighted_words.append((word, 1.))
+        for word, sim in similar.items():
+            weighted_words.append((sanitize(word), sim))
+    query_parts = [
+        '(%s)^%3.3f' % (word, weight)
+        for (word, weight) in weighted_words
+    ]
+    return ' '.join(query_parts), weighted_words
+
+
 def search(pattern=None, clue=None, length=None, count=20):
     """
     Find words and phrases that match various criteria: a regex pattern,
@@ -40,7 +58,7 @@ def search(pattern=None, clue=None, length=None, count=20):
     >>> search(clue='lincoln assassin', length=15)[0][1]
     'JOHN WILKES BOOTH'
     """
-    global INDEX, QUERY_PARSER
+    global INDEX, QUERY_PARSER, NUMBERBATCH
     if clue is None:
         if pattern is None:
             return []
@@ -60,25 +78,30 @@ def search(pattern=None, clue=None, length=None, count=20):
         QUERY_PARSER.add_plugin(qparser.GroupPlugin())
         QUERY_PARSER.add_plugin(qparser.BoostPlugin())
 
-    matches = []
+    if NUMBERBATCH is None:
+        NUMBERBATCH = load_numberbatch()
+
+    matches = {}
     with INDEX.searcher() as searcher:
-        results = searcher.search(QUERY_PARSER.parse(clue), limit=20)
-        # half-assed query expansion
-        clue_parts = set([sanitize(result['text']) for result in results])
-        expanded_clue = ", ".join(clue_parts)
-        new_clue = '%s, (%s)^0.01' % (clue, expanded_clue)
+        clue_parts = tokenize(clue, 'en')
+        expanded, similar = query_expand(NUMBERBATCH, clue_parts)
+        new_clue = '%s, %s' % (sanitize(clue), expanded)
         results = searcher.search(QUERY_PARSER.parse(new_clue), limit=None)
-        seen = set()
+        for word, weight in similar:
+            slug = slugify(word)
+            if length is None or length == len(slug):
+                if pattern is None or pattern.match(slug):
+                    matches[slug.upper()] = weight * 100
         for i, result in enumerate(results):
             text = result['text']
             slug = slugify(text)
-            if slug not in seen:
-                if length is None or length == len(slug):
-                    if pattern is None or pattern.match(slug):
-                        seen.add(slug)
-                        #crom, text = WORDS.cromulence(slug)
-                        score = results.score(i)
-                        matches.append((score, text))
-                        if len(matches) >= count:
-                            break
-        return matches
+            if length is None or length == len(slug):
+                if pattern is None or pattern.match(slug):
+                    score = results.score(i)
+                    if text in matches:
+                        matches[text] += score
+                    else:
+                        matches[text] = score
+                    if len(matches) >= count:
+                        break
+        return sorted(matches.items(), key=itemgetter(1), reverse=True)

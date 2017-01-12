@@ -2,6 +2,7 @@ import re
 import pandas as pd
 import numpy as np
 from .normalize import alphanumeric
+from solvertools.util import data_path
 
 
 DOUBLE_DIGIT_RE = re.compile(r'[0-9][0-9]')
@@ -25,6 +26,10 @@ def load_labels_and_npy(label_file, npy_file):
     labels = [line.rstrip('\n') for line in open(label_file, encoding='utf-8')]
     npy = np.load(npy_file)
     return pd.DataFrame(npy, index=labels)
+
+
+def load_numberbatch():
+    return load_labels_and_npy(data_path('vectors/english.labels.txt'), data_path('vectors/english.npy'))
 
 
 def get_vector(frame, label):
@@ -61,8 +66,18 @@ def cosine_similarity(vec1, vec2):
     return normalize_vec(vec1).dot(normalize_vec(vec2))
 
 
+def similar_to_term(frame, term, limit=50):
+    vec = get_vector(frame, term)
+    most_similar = similar_to_vec(frame, vec, limit)
+    if len(most_similar):
+        max_val = most_similar.iloc[0]
+        most_similar /= max_val
+    return most_similar ** 3
+
+
 def similar_to_vec(frame, vec, limit=50):
-    if vec.dot(vec) == 0.:
+    sqnorm = vec.dot(vec)
+    if sqnorm == 0.:
         return pd.Series(data=[], index=[], dtype='f')
     similarity = frame.dot(vec.astype('f'))
     return similarity.dropna().nlargest(limit)

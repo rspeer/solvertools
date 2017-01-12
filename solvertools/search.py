@@ -91,7 +91,7 @@ def search(pattern=None, clue=None, length=None, count=20):
             slug = slugify(word)
             if length is None or length == len(slug):
                 if pattern is None or pattern.match(slug):
-                    matches[slug.upper()] = weight * 100
+                    matches[word.upper()] = weight * 1000
         for i, result in enumerate(results):
             text = result['text']
             slug = slugify(text)

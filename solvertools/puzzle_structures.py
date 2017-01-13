@@ -118,31 +118,30 @@ def brute_force_diagonalize(answers, wordlist=WORDS, quiet=False):
 
         >>> metas = ['benjamins', 'billgates', 'donors', 'luxor', 'mansion', 'miserly', 'realty']
         >>> brute_force_diagonalize(metas)[0]   # doctest: +NORMALIZE_WHITESPACE
-        Cromulence  Text    Info
-        15.3    MENOROT 
-        14.9    BE NOISY    
-        14.8    DELLROY 
-        14.4    RUN EAST    
-        13.3    MIX LAST    
-        13.3    MAX LAST    
-        13.2    LES LIST    
-        13.1    RUN SALT    
-        13.1    LAS LAST    
-        13.1    BOX STAY    
-        13.0    MENOGYN 
-        12.3    MALORY I    
-        12.2    BUS LIST    
-        12.1    LINE TO I   
-        11.9    LIN LAST    
-        11.5    ME NOT AN   
-        11.5    DEAL ROY    
-        11.2    RUNS RAY    
-        11.2    MUS LAST    
-        11.1    BE SO IST   
-        (15.3, 'MENOROT', None)
+	Cromulence  Text    Info
+	15.4        BE NOISY
+	15.1        RUN EAST
+	14.7        MAX LAST
+	14.6        MIX LAST
+	14.5        MENOROT
+	14.3        BOX STAY
+	14.0        LINE TO I
+	14.0        DELLROY
+	13.9        LAS LAST
+	13.8        RUN SALT
+	13.4        BUS LIST
+	13.3        MALORY I
+	13.1        LES LIST
+	12.9        ME NOT AN
+	12.5        DEAL ROY
+	12.3        LIN LAST
+	12.2        RULE IS I
+	12.2        MENOGYN
+	12.2        LENORA I
+	12.1        RUNS RAY
+	(15.4, 'BE NOISY', None)
 
-    Okay, it actually thinks the best answer is "MENOROT", the plural of
-    "menorah". But BE NOISY is in second place. And if that doesn't work,
+    The best answer, of course, is "BE NOISY". And if that doesn't work,
     you can try to solve the hunt with other strategies such as RUN EAST.
     """
     results = []

@@ -1,8 +1,8 @@
 from solvertools.wordlist import WORDS
 from solvertools.normalize import slugify, sanitize
 from solvertools.util import data_path
-from wordfreq import tokenize
 from whoosh.index import open_dir
+from whoosh.analysis import StandardAnalyzer
 from whoosh import qparser
 from operator import itemgetter
 from collections import defaultdict
@@ -12,6 +12,7 @@ import re
 INDEX = None
 QUERY_PARSER = None
 NUMBERBATCH = None
+ANALYZER = StandardAnalyzer()
 
 
 def simple_parser(fieldname, schema, group, **kwargs):
@@ -31,6 +32,10 @@ def simple_parser(fieldname, schema, group, **kwargs):
         fieldname, schema, plugins=pins, group=orgroup,
         **kwargs
     )
+
+
+def tokenize(text):
+    return [tok.text for tok in ANALYZER(text)]
 
 
 def query_expand(numberbatch, words, limit=50):
@@ -86,7 +91,7 @@ def search(pattern=None, clue=None, length=None, count=20):
 
     matches = {}
     with INDEX.searcher() as searcher:
-        clue_parts = tokenize(clue, 'en')
+        clue_parts = tokenize(clue)
         expanded, similar = query_expand(NUMBERBATCH, clue_parts)
         clue_slugs = [slugify(part) for part in clue_parts]
         new_clue = '%s, %s' % (sanitize(clue), expanded)

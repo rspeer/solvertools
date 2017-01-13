@@ -2,7 +2,7 @@ from flask import Flask, render_template, request, redirect, Response
 from solvertools.search import search
 from solvertools.anagram import anagrams
 import re
-app = Flask(__name__)
+application = app = Flask(__name__)
 
 
 @app.route('/')
@@ -141,4 +141,4 @@ def anagram_interactive_page():
     return redirect('/static/anagrampage/index.html')
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run('0.0.0.0')

@@ -104,4 +104,4 @@ def search(pattern=None, clue=None, length=None, count=20):
                         matches[text] = score
                     if len(matches) >= count:
                         break
-        return sorted(matches.items(), key=itemgetter(1), reverse=True)
+        return sorted([(score, text) for (text, score) in matches.items()], reverse=True)

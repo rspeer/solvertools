@@ -2,7 +2,7 @@ from solvertools.util import db_path, data_path, wordlist_path, corpus_path
 from solvertools.normalize import slugify, unspaced_lower
 from solvertools.regextools import is_exact, regex_len, regex_slice
 from solvertools.letters import (
-    alphagram, alphabytes_to_alphagram, anahash, consonantcy, alphabytes, random_letters
+    alphagram, anahash, consonantcy, alphabytes, random_letters
 )
 import sqlite3
 import re

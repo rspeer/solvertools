@@ -118,28 +118,28 @@ def brute_force_diagonalize(answers, wordlist=WORDS, quiet=False):
 
         >>> metas = ['benjamins', 'billgates', 'donors', 'luxor', 'mansion', 'miserly', 'realty']
         >>> brute_force_diagonalize(metas)[0]   # doctest: +NORMALIZE_WHITESPACE
-	Cromulence  Text    Info
-	15.4        BE NOISY
-	15.1        RUN EAST
-	14.7        MAX LAST
-	14.6        MIX LAST
-	14.5        MENOROT
-	14.3        BOX STAY
-	14.0        LINE TO I
-	14.0        DELLROY
-	13.9        LAS LAST
-	13.8        RUN SALT
-	13.4        BUS LIST
-	13.3        MALORY I
-	13.1        LES LIST
-	12.9        ME NOT AN
-	12.5        DEAL ROY
-	12.3        LIN LAST
-	12.2        RULE IS I
-	12.2        MENOGYN
-	12.2        LENORA I
-	12.1        RUNS RAY
-	(15.4, 'BE NOISY', None)
+    Cromulence  Text    Info
+    15.4        BE NOISY
+    15.1        RUN EAST
+    14.7        MAX LAST
+    14.6        MIX LAST
+    14.5        MENOROT
+    14.3        BOX STAY
+    14.0        LINE TO I
+    14.0        DELLROY
+    13.9        LAS LAST
+    13.8        RUN SALT
+    13.4        BUS LIST
+    13.3        MALORY I
+    13.1        LES LIST
+    12.9        ME NOT AN
+    12.5        DEAL ROY
+    12.3        LIN LAST
+    12.2        RULE IS I
+    12.2        MENOGYN
+    12.2        LENORA I
+    12.1        RUNS RAY
+    (15.4, 'BE NOISY', None)
 
     The best answer, of course, is "BE NOISY". And if that doesn't work,
     you can try to solve the hunt with other strategies such as RUN EAST.

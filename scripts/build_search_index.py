@@ -58,7 +58,6 @@ def init_search_index():
         for line in open(corpus_path(corpus), encoding='utf-8'):
             text, defn = line.rstrip().split('\t')
             slug = slugify(text)
-            print(text, defn)
             writer.add_document(
                 slug=slug,
                 text=text,
@@ -78,7 +77,6 @@ def init_search_index():
             defn_parts.append('"%s"' % example)
         defn_parts.append(links)
         defn = '; '.join(defn_parts)
-        print(lemmas, defn)
         for name in lemmas:
             this_slug = slugify(name)
 

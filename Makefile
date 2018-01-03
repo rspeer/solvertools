@@ -17,12 +17,13 @@ WORDLISTS = $(WORDLIST_DIR)/enable.txt $(WORDLIST_DIR)/twl06.txt \
 	$(WORDLIST_DIR)/wikipedia-en-titles.txt \
 	$(WORDLIST_DIR)/wikipedia-en-links.txt \
 	$(WORDLIST_DIR)/wordnet.txt \
+	$(WORDLIST_DIR)/wordfreq.txt \
 	$(WORDLIST_DIR)/csw-apr07.txt \
 	$(WORDLIST_DIR)/npl-allwords.txt
 
 search: $(SEARCH_DIR)/_MAIN_1.toc
 
-wordlists: $(WORDLISTS) $(WORDLIST_DIR)/combined.txt
+wordlists: $(WORDLISTS) $(WORDLIST_DIR)/combined.txt $(WORDLIST_DIR)/combined.freq.txt
 
 $(WORDLIST_DIR)/google-books.freq.txt: $(WORDLIST_DIR)/raw/google-books-1grams.txt\
 	$(WORDLIST_DIR)/raw/google-books-2grams.txt
@@ -33,6 +34,15 @@ $(WORDLIST_DIR)/google-books.txt: $(WORDLIST_DIR)/google-books.freq.txt
 
 $(WORDLIST_DIR)/google-books-1grams.txt: $(WORDLIST_DIR)/raw/google-books-1grams.txt
 	LC_ALL=C egrep -h "^[A-Z']+," $^ | sort > $@
+
+$(WORDLIST_DIR)/combined.freq.txt: $(WORDLIST_DIR)/combined.txt
+	sort -nrk 2 -t "," $< | grep -v ",1$$" > $@
+
+$(WORDLIST_DIR)/wordfreq.txt: $(WORDLIST_DIR)/wordfreq.freq.txt
+	LC_ALL=C sort $< > $@
+
+$(WORDLIST_DIR)/wordfreq.freq.txt: scripts/build_wordfreq.py
+	$(PYTHON) scripts/build_wordfreq.py > $@
 
 $(WORDLIST_DIR)/google-books-1grams.freq.txt: $(WORDLIST_DIR)/google-books-1grams.txt
 	sort -nrk 2 -t "," $< > $@

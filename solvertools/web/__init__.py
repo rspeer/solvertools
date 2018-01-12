@@ -23,10 +23,7 @@ def search_page():
             length = None
 
     try:
-        search_results = [
-            (score, answer) for (answer, score) in
-            search(pattern=pattern, clue=clue, length=length, count=100)
-        ]
+        search_results = search(pattern=pattern, clue=clue, length=length, count=100)
         return render_template(
             'main.html', section='clue', results=search_results,
             pattern=pattern, clue=clue, length=length

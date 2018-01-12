@@ -71,7 +71,7 @@ def search(pattern=None, clue=None, length=None, count=20):
         if pattern is None:
             return []
         else:
-            return [(a, b) for (b, a) in WORDS.search(pattern, count=count, use_cromulence=True)]
+            return WORDS.search(pattern, count=count, use_cromulence=True)
 
     if pattern is not None:
         pattern = pattern.lstrip('^').rstrip('$').lower()

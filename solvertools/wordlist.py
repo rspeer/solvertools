@@ -17,10 +17,9 @@ logger = logging.getLogger(__name__)
 
 
 # The NULL_HYPOTHESIS_ENTROPY is the log-probability per letter of something
-# that is just barely an answer, for which we use the entropy of the meta
-# answer "OUI, PAREE'S GAY". (Our probability metric considers that a worse
-# answer than "TURKMENHOWAYOLLARY" or "ATZERODT OR VOLOKH EG".)
-NULL_HYPOTHESIS_ENTROPY = -4.195522303459861
+# that is just barely an answer, for which we use the entropy of the answer
+# "OTTO HID JAN'S KEY" (recalibrated in 2018).
+NULL_HYPOTHESIS_ENTROPY = -3.75
 DECIBEL_SCALE = 20 / log(10)
 
 
@@ -93,22 +92,32 @@ class Wordlist:
         if found is None:
             return None
         freq, text = found
-        logprob = log(freq) - self.logtotal
+        logprob = (log(freq) - self.logtotal)
         return logprob, text
 
-    def logprob(self, word):
+    def freq(self, word):
         """
-        Get the log probability of a single item in the wordlist.
-        Always returns just a number, which is -1000 if it's not found.
+        Get the frequency of a single item in the wordlist.
+        Always returns just a number, which is 0 if it's not found.
         """
         if self.logtotal is None:
             totalfreq, _ = self.lookup_slug('')
             self.logtotal = log(totalfreq)
         found = self.lookup_slug(slugify(word))
         if found is None:
-            return -1000.
+            return 0.
         else:
             return log(found[0]) - self.logtotal
+
+    def logprob(self, word):
+        """
+        Get the log probability of a single word, or -1000 if it's not found.
+        """
+        seg_result = self.segment_logprob(word)
+        if seg_result is None:
+            return -1000.
+        else:
+            return seg_result[0]
 
     def text_logprob(self, text):
         """
@@ -591,6 +600,13 @@ def combine_wordlists(weighted_lists, out_name):
     print("Combining %s" % weighted_lists)
     for name, weight in weighted_lists:
         for i, slug, freq, text in read_wordlist(name):
+            # Turns out that things that just barely make our cutoff from
+            # Google Books are worse than you'd think
+            if name == 'google-books':
+                freq -= 1000
+                if freq <= 0:
+                    continue
+
             # Replace an existing text if this spelling of it has a solid
             # majority of the frequency so far. Avoids weirdness such as
             # spelling "THE" as "T'HE".

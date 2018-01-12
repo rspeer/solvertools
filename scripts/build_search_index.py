@@ -1,5 +1,5 @@
 from solvertools.wordlist import WORDS
-from solvertools.normalize import slugify
+from solvertools.normalize import slugify, sanitize
 from solvertools.util import data_path, corpus_path
 from whoosh.fields import Schema, ID, TEXT, KEYWORD, NUMERIC
 from whoosh.analysis import StandardAnalyzer
@@ -39,15 +39,16 @@ def init_search_index():
         for line in tqdm(open(data_path('wordlists/raw/big/en-wp-2word-summaries.txt')), desc='wikipedia'):
             title, summary = line.split('\t', 1)
             summary = summary.rstrip()
-            title = title.split(" (")[0]
+            title = sanitize(title.split(" (")[0])
             if title and summary:
-                slug = slugify(title)
-                writer.add_document(
-                    slug=slug,
-                    text=title,
-                    definition=summary,
-                    length=len(slug)
-                )
+                if ' ' not in title or title in WORDS:
+                    slug = slugify(title)
+                    writer.add_document(
+                        slug=slug,
+                        text=title,
+                        definition=summary,
+                        length=len(slug)
+                    )
     except FileNotFoundError:
         print("Skipping Wikipedia search index: en-wp-2word-summaries.txt not found")
 

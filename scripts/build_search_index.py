@@ -39,10 +39,10 @@ def init_search_index():
         for line in tqdm(open(data_path('wordlists/raw/big/en-wp-2word-summaries.txt')), desc='wikipedia'):
             title, summary = line.split('\t', 1)
             summary = summary.rstrip()
-            title = sanitize(title.split(" (")[0])
-            if title and summary:
-                if ' ' not in title or title in WORDS:
-                    slug = slugify(title)
+            title = sanitize(title.split(" (")[0]).upper()
+            if title and summary and 'may refer to' not in summary:
+                slug = slugify(title)
+                if WORDS.logprob(slug) > -17:
                     writer.add_document(
                         slug=slug,
                         text=title,

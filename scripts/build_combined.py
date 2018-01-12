@@ -9,6 +9,7 @@ def build_combined_list():
         ('csw-apr07', 10),
         ('wikipedia-en-links', 100),
         ('wikipedia-en-titles', 1),
+        ('wordfreq', 1),
         ('wordnet', 1000),
         ('npl-allwords', 1),
         ('wordfreq', 50)

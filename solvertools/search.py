@@ -71,7 +71,7 @@ def search(pattern=None, clue=None, length=None, count=20):
         if pattern is None:
             return []
         else:
-            return WORDS.search(pattern, count=count, use_cromulence=True)
+            return [(a, b) for (b, a) in WORDS.search(pattern, count=count, use_cromulence=True)]
 
     if pattern is not None:
         pattern = pattern.lstrip('^').rstrip('$').lower()
@@ -104,6 +104,8 @@ def search(pattern=None, clue=None, length=None, count=20):
                         matches[word.upper()] = weight * 1000
         for i, result in enumerate(results):
             text = result['text']
+            if any(c.isdigit() for c in text):
+                continue
             slug = slugify(text)
             if length is None or length == len(slug):
                 if pattern is None or pattern.match(slug):

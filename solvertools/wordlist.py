@@ -100,11 +100,14 @@ class Wordlist:
         Get the frequency of a single item in the wordlist.
         Always returns just a number, which is 0 if it's not found.
         """
+        if self.logtotal is None:
+            totalfreq, _ = self.lookup_slug('')
+            self.logtotal = log(totalfreq)
         found = self.lookup_slug(slugify(word))
         if found is None:
             return 0.
         else:
-            return found[0]
+            return log(found[0]) - self.logtotal
 
     def logprob(self, word):
         """

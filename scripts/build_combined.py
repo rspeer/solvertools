@@ -11,7 +11,8 @@ def build_combined_list():
         ('wikipedia-en-titles', 1),
         ('wordfreq', 1),
         ('wordnet', 1000),
-        ('npl-allwords', 1)
+        ('npl-allwords', 1),
+        ('wordfreq', 50)
     ], 'combined')
 
 

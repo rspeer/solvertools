@@ -1,16 +1,18 @@
 from solvertools.wordlist import WORDS
 from solvertools.normalize import slugify, sanitize
 from solvertools.util import data_path
-from wordfreq import tokenize
 from whoosh.index import open_dir
+from whoosh.analysis import StandardAnalyzer
 from whoosh import qparser
 from operator import itemgetter
+from collections import defaultdict
 from .conceptnet_numberbatch import load_numberbatch, get_vector, similar_to_term
 import re
 
 INDEX = None
 QUERY_PARSER = None
 NUMBERBATCH = None
+ANALYZER = StandardAnalyzer()
 
 
 def simple_parser(fieldname, schema, group, **kwargs):
@@ -32,18 +34,24 @@ def simple_parser(fieldname, schema, group, **kwargs):
     )
 
 
-def query_expand(numberbatch, words):
-    weighted_words = []
+def tokenize(text):
+    return [tok.text for tok in ANALYZER(text)]
+
+
+def query_expand(numberbatch, words, limit=50):
+    weighted_words = defaultdict(float)
     for word in words:
         similar = similar_to_term(numberbatch, word, limit=25)
-        weighted_words.append((word, 1.))
-        for word, sim in similar.items():
-            weighted_words.append((sanitize(word), sim))
+        this_weight = min(20, -WORDS.logprob(word)) / 20
+        weighted_words[sanitize(word)] += this_weight
+        for word2, sim in similar.items():
+            weighted_words[sanitize(word2)] += sim * this_weight
+    words_and_weights = sorted(weighted_words.items(), key=itemgetter(1), reverse=True)[:limit]
     query_parts = [
         '(%s)^%3.3f' % (word, weight)
-        for (word, weight) in weighted_words
+        for (word, weight) in words_and_weights
     ]
-    return ' '.join(query_parts), weighted_words
+    return ' '.join(query_parts), words_and_weights
 
 
 def search(pattern=None, clue=None, length=None, count=20):
@@ -83,15 +91,17 @@ def search(pattern=None, clue=None, length=None, count=20):
 
     matches = {}
     with INDEX.searcher() as searcher:
-        clue_parts = tokenize(clue, 'en')
+        clue_parts = tokenize(clue)
         expanded, similar = query_expand(NUMBERBATCH, clue_parts)
+        clue_slugs = [slugify(part) for part in clue_parts]
         new_clue = '%s, %s' % (sanitize(clue), expanded)
         results = searcher.search(QUERY_PARSER.parse(new_clue), limit=None)
         for word, weight in similar:
             slug = slugify(word)
-            if length is None or length == len(slug):
-                if pattern is None or pattern.match(slug):
-                    matches[word.upper()] = weight * 1000
+            if slug not in clue_slugs:
+                if length is None or length == len(slug):
+                    if pattern is None or pattern.match(slug):
+                        matches[word.upper()] = weight * 1000
         for i, result in enumerate(results):
             text = result['text']
             if any(c.isdigit() for c in text):
@@ -106,4 +116,4 @@ def search(pattern=None, clue=None, length=None, count=20):
                         matches[text] = score
                     if len(matches) >= count:
                         break
-        return sorted(matches.items(), key=itemgetter(1), reverse=True)
+        return sorted([(score, text) for (text, score) in matches.items()], reverse=True)

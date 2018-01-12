@@ -19,7 +19,9 @@ WORDLISTS = $(WORDLIST_DIR)/enable.txt $(WORDLIST_DIR)/twl06.txt \
 	$(WORDLIST_DIR)/wordnet.txt \
 	$(WORDLIST_DIR)/wordfreq.txt \
 	$(WORDLIST_DIR)/csw-apr07.txt \
-	$(WORDLIST_DIR)/npl-allwords.txt
+	$(WORDLIST_DIR)/npl-allwords.txt \
+	$(WORDLIST_DIR)/wordfreq.txt \
+	$(WORDLIST_DIR)/wordfreq.freq.txt \
 
 search: $(SEARCH_DIR)/_MAIN_1.toc
 
@@ -49,6 +51,12 @@ $(WORDLIST_DIR)/google-books-1grams.freq.txt: $(WORDLIST_DIR)/google-books-1gram
 
 $(WORDLIST_DIR)/enable.txt: $(WORDLIST_DIR)/raw/enable.txt shell/freq1.sh
 	tr a-z A-Z < $< | shell/freq1.sh > $@
+
+$(WORDLIST_DIR)/wordfreq.freq.txt: $(WORDLIST_DIR)/raw/wordfreq-1.6-en.txt
+	cp $< $@
+
+$(WORDLIST_DIR)/wordfreq.txt: $(WORDLIST_DIR)/wordfreq.freq.txt
+	LC_ALL=C sort $< > $@
 
 $(WORDLIST_DIR)/csw-apr07.txt: $(WORDLIST_DIR)/raw/csw-apr07.txt shell/freq1.sh
 	shell/freq1.sh < $< > $@

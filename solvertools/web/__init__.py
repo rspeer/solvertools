@@ -2,8 +2,7 @@ from flask import Flask, render_template, request, redirect, Response
 from solvertools.search import search
 from solvertools.anagram import anagrams
 import re
-app = Flask(__name__)
-application = app
+application = app = Flask(__name__)
 
 
 @app.route('/')

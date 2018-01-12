@@ -17,10 +17,9 @@ logger = logging.getLogger(__name__)
 
 
 # The NULL_HYPOTHESIS_ENTROPY is the log-probability per letter of something
-# that is just barely an answer, for which we use the entropy of the meta
-# answer "OUI, PAREE'S GAY". (Our probability metric considers that a worse
-# answer than "TURKMENHOWAYOLLARY" or "ATZERODT OR VOLOKH EG".)
-NULL_HYPOTHESIS_ENTROPY = -4.2
+# that is just barely an answer, for which we use the entropy of the answer
+# "OTTO HID JAN'S KEY" (recalibrated in 2018).
+NULL_HYPOTHESIS_ENTROPY = -3.75
 DECIBEL_SCALE = 20 / log(10)
 
 
@@ -109,16 +108,13 @@ class Wordlist:
 
     def logprob(self, word):
         """
-        Get the log probability of a single word, or 0 if it's not found.
+        Get the log probability of a single word, or -1000 if it's not found.
         """
-        if self.logtotal is None:
-            totalfreq, _ = self.lookup_slug('')
-            self.logtotal = log(totalfreq)
-        freq = self.freq(word)
-        if freq == 0.:
-            return -1000
-        logprob = log(freq) - self.logtotal
-        return logprob
+        seg_result = self.segment_logprob(word)
+        if seg_result is None:
+            return -1000.
+        else:
+            return seg_result[0]
 
     def text_logprob(self, text):
         """
@@ -606,7 +602,7 @@ def combine_wordlists(weighted_lists, out_name):
             if name == 'google-books':
                 freq -= 1000
                 if freq <= 0:
-                    break
+                    continue
 
             # Replace an existing text if this spelling of it has a solid
             # majority of the frequency so far. Avoids weirdness such as

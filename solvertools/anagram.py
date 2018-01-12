@@ -121,7 +121,7 @@ def adjusted_anagram_cost(item):
     anagrams.
     """
     used, letters, wildcards, index = item
-    return anagram_cost(letters) / (max(0, wildcards) + 1) * (index + 1)
+    return anagram_cost(letters) / (max(0, wildcards) + 1) * (index + 2)
 
 
 def anagram_double(text, wildcards=0, wordlist=WORDS, count=100, quiet=False):
@@ -150,7 +150,7 @@ def _anagram_double_2(alpha, wildcards, wordlist):
         if wildcards >= wildcards_used or (wildcards < 0 and wildcards_used == 0)
     ]
 
-    sub_anas.sort(key=adjusted_anagram_cost)
+    # sub_anas.sort(key=adjusted_anagram_cost)
     for abytes, alpha2, wildcards_remaining, index in sub_anas:
         alpha1 = alphabytes_to_alphagram(abytes)
         for slug1 in _anagram_single(alpha1, 0, wordlist):

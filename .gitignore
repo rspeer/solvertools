@@ -1,6 +1,6 @@
 docs/*.html
 data/db/
-data/search/
+data/search
 data/wordlists/*.txt
 data/wordlists/greppable/
 data/wordlists/alphabytes/

@@ -1,0 +1,40 @@
+<!doctype html>
+<html>
+<head>
+<title>Anagram Tool</title>
+<script type="text/javascript" src="10000words.js">
+</script>
+<script type="text/javascript" src="anagram.js">
+</script>
+<style>
+body { font-family: monospace; }
+input { font-family: monospace; }
+h1 { color: #aaa; }
+table { width: 100%; }
+textarea { width: 100%; }
+#suggest-common { color: #048; }
+#diff { width: 90%; }
+</style>
+</head>
+<body>
+<canvas id="canvas" width="780" height="350"></canvas>
+<div id="suggest-container">
+  <div id="suggest-common-div">Suggested words:
+    <span id="suggest-common"></span>
+  </div>
+</div>
+
+<form>
+  Diff: <input type="text" name="diff" id="diff"></input>
+  <table style="width: 100%">
+    <tr>
+      <th>Source text</th>
+      <th>Your anagram</th>
+    </tr>
+    <tr>
+      <td><textarea rows="40" id="sourcetext" onChange="update()" onKeyUp="update()"></textarea></td>
+      <td><textarea rows="40" id="anagramtext" onChange="update()" onKeyUp="update()"></textarea></td>
+    </tr>
+  </table>
+</form>
+</html>

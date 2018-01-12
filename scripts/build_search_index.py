@@ -1,12 +1,12 @@
 from solvertools.wordlist import WORDS
-from solvertools.normalize import slugify
+from solvertools.normalize import slugify, sanitize
 from solvertools.util import data_path, corpus_path
 from whoosh.fields import Schema, ID, TEXT, KEYWORD, NUMERIC
 from whoosh.analysis import StandardAnalyzer
 from whoosh.index import create_in
 import nltk
 import os
-
+from tqdm import tqdm
 
 schema = Schema(
     slug=ID,
@@ -34,16 +34,30 @@ def init_search_index():
     ix = create_in(data_path('search'), schema)
     writer = ix.writer(procs=4)
 
+    # Add Wikipedia lead sections
+    try:
+        for line in tqdm(open(data_path('wordlists/raw/big/en-wp-2word-summaries.txt')), desc='wikipedia'):
+            title, summary = line.split('\t', 1)
+            summary = summary.rstrip()
+            title = sanitize(title.split(" (")[0]).upper()
+            if title and summary and 'may refer to' not in summary:
+                slug = slugify(title)
+                if WORDS.logprob(slug) > -17:
+                    writer.add_document(
+                        slug=slug,
+                        text=title,
+                        definition=summary,
+                        length=len(slug)
+                    )
+    except FileNotFoundError:
+        print("Skipping Wikipedia search index: en-wp-2word-summaries.txt not found")
+
     # Add lookups from a phrase to a word in that phrase
-    count = 0
-    for slug, freq, text in WORDS.iter_all_by_freq():
+    for slug, freq, text in tqdm(WORDS.iter_all_by_freq(), desc='phrases'):
         words = text.split()
         if freq < 10000:
             break
         if len(words) > 1:
-            count += 1
-            if count % 10000 == 0:
-                print("%s,%s" % (text, freq))
             for word in words:
                 if WORDS.logprob(word) < -7:
                     writer.add_document(
@@ -55,10 +69,9 @@ def init_search_index():
 
     # Add crossword clues
     for corpus in ('crossword_clues.txt', 'more_crossword_clues.txt'):
-        for line in open(corpus_path(corpus), encoding='utf-8'):
+        for line in tqdm(open(corpus_path(corpus), encoding='utf-8'), desc=corpus):
             text, defn = line.rstrip().split('\t')
             slug = slugify(text)
-            print(text, defn)
             writer.add_document(
                 slug=slug,
                 text=text,
@@ -68,7 +81,7 @@ def init_search_index():
 
     # Add WordNet glosses and links
     synsets = wordnet.all_synsets()
-    for syn in synsets:
+    for syn in tqdm(synsets, desc='wordnet'):
         lemmas = [lem.replace('_', ' ') for lem in syn.lemma_names()]
         related = [lem.replace('_', ' ') for lem in get_adjacent(syn)]
         related2 = lemmas + related
@@ -78,7 +91,6 @@ def init_search_index():
             defn_parts.append('"%s"' % example)
         defn_parts.append(links)
         defn = '; '.join(defn_parts)
-        print(lemmas, defn)
         for name in lemmas:
             this_slug = slugify(name)
 

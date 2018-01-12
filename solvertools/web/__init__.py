@@ -3,6 +3,7 @@ from solvertools.search import search
 from solvertools.anagram import anagrams
 import re
 app = Flask(__name__)
+application = app
 
 
 @app.route('/')
@@ -23,7 +24,10 @@ def search_page():
             length = None
 
     try:
-        search_results = search(pattern=pattern, clue=clue, length=length, count=100)
+        search_results = [
+            (score, answer) for (answer, score) in
+            search(pattern=pattern, clue=clue, length=length, count=100)
+        ]
         return render_template(
             'main.html', section='clue', results=search_results,
             pattern=pattern, clue=clue, length=length
@@ -141,4 +145,4 @@ def anagram_interactive_page():
     return redirect('/static/anagrampage/index.html')
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run('0.0.0.0')

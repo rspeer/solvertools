@@ -1,6 +1,6 @@
 Prerequisites
 =============
-You need Python 3.3+, Make, and GNU tools such as 'grep' and 'sort'.
+You need Python 3.4+, Make, and GNU tools such as 'grep' and 'sort'.
 
 To set up Solvertools, run `setup.py develop` (not `install`) in your
 appropriately-configured Python environment.
@@ -29,18 +29,11 @@ To install the code in this environment, run:
 
     sudo python3 setup.py develop
 
-After this, to set up the wordlists, run:
+You'll need data. You could try to build it with the Makefile. Or you could
+just download it:
 
-    make
-
-...and wait for maybe an hour while arbitrary words print to your screen
-a lot. (That's how you know it's doing something.)
-
-Copying the built data from someone else on a USB drive is also an option.
-
-One person (Paul) has possibly made this work on Windows, but you need a
-terminal that supports UTF-8, because I'm not going to hunt down all the things
-that can go wrong without it. Paul recommends msys2.
+    wget https://s3.amazonaws.com/ireproof/solvertools-2018-data.tar.gz
+    tar xvf solvertools-2018-data.tar.gz
 
 
 Quick start

@@ -53,6 +53,7 @@ def normalize_vec(vec):
         vals = vec.values
     else:
         vals = vec
+    vec = vec.astype('f')
     norm = vals.dot(vals) ** .5
     return vec / (norm + 1e-6)
 

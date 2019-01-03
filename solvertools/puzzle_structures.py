@@ -116,8 +116,8 @@ def brute_force_diagonalize(answers, wordlist=WORDS, quiet=False):
     As a somewhat artificial example, let's suppose we have these seven
     answers from the 2000 metas, but don't remember their order:
 
-        >>> metas = ['benjamins', 'billgates', 'donors', 'luxor', 'mansion', 'miserly', 'realty']
-        >>> brute_force_diagonalize(metas)[0]   # doctest: +NORMALIZE_WHITESPACE
+    >>> metas = ['benjamins', 'billgates', 'donors', 'luxor', 'mansion', 'miserly', 'realty']
+    >>> brute_force_diagonalize(metas)[0]   # doctest: +NORMALIZE_WHITESPACE
     Cromulence  Text    Info
     15.4        BE NOISY
     15.1        RUN EAST

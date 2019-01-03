@@ -4,7 +4,7 @@ data/search
 data/wordlists/*.txt
 data/wordlists/greppable/
 data/wordlists/alphabytes/
-data/wordlists/raw/big/
+data/wordlists/raw/
 env/
 build/
 dist/

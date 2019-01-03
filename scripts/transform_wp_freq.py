@@ -4,7 +4,7 @@ from solvertools.normalize import normalize_wp_link
 assert sys.getdefaultencoding() == 'utf-8'
 
 
-LINE_RE = re.compile('^ *([0-9]+) (.*)$')
+LINE_RE = re.compile("^ *([0-9]+) (.*)$")
 
 
 def transform():
@@ -16,7 +16,8 @@ def transform():
             if freq == 1:
                 break
             name = normalize_wp_link(match.group(2)).strip()
-            if name:
+
+            if name and '###' not in name:
                 print('%s,%d' % (name, freq))
 
 

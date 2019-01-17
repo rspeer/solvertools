@@ -81,5 +81,9 @@ $(WORDLIST_DIR)/combined.txt: $(WORDLISTS) scripts/build_combined.py
 $(CORPUS_DIR)/wikipedia.txt: $(WORDLIST_DIR)/raw/wp-links.txt.gz scripts/join_wp_links.py
 	zcat $< | $(PYTHON) scripts/join_wp_links.py > $@
 
+$(CORPUS_DIR)/all.txt: $(CORPUS_DIR)/wikipedia.txt $(CORPUS_DIR)/crossword_clues.txt $(CORPUS_DIR)/more_crossword_clues.txt
+	cat $< | tr '"' ' ' > $@
+
 $(SEARCH_DIR)/_MAIN_1.toc: scripts/build_search_index.py $(CORPUS_DIR)/crossword_clues.txt
 	$(PYTHON) scripts/build_search_index.py
+

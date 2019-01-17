@@ -102,14 +102,15 @@ def regex_pieces(regex):
 
 def _regex_len_pattern(pattern):
     "Returns the minimum and maximum length of a parsed regex pattern."
+    assert isinstance(pattern, (list, SubPattern)), type(pattern)
     lo = hi = 0
     for op, data in pattern:
         if op in (LITERAL, IN, CATEGORY, ANY):
             sub_lo = sub_hi = 1
         elif op == SUBPATTERN:
-            sub_lo, sub_hi = _regex_len_pattern(data[1])
+            sub_lo, sub_hi = _regex_len_pattern(data[-1])
         elif op == BRANCH:
-            sub_lo, sub_hi = _regex_len_branch(data[1])
+            sub_lo, sub_hi = _regex_len_branch(data[-1])
         elif op == MAX_REPEAT:
             sub_lo, sub_hi = _regex_len_repeat(data)
         elif op == AT:
@@ -192,9 +193,9 @@ def _regex_index(struct, index):
             else:
                 return []
         elif opcode == SUBPATTERN:
-            return _regex_index_pattern(data[1], index)
+            return _regex_index_pattern(data[-1], index)
         elif opcode == BRANCH:
-            return _regex_index_branch(data[1], index)
+            return _regex_index_branch(data[-1], index)
         elif opcode == MAX_REPEAT:
             return _regex_index_repeat(data, index)
         else:
@@ -331,11 +332,11 @@ def _unparse_category(data):
 
 
 def _unparse_subpattern(data):
-    return '(' + unparse(data[1]) + ')'
+    return '(' + unparse(data[-1]) + ')'
 
 
 def _unparse_branch(data):
-    return '|'.join(unparse(branch) for branch in data[1])
+    return '|'.join(unparse(branch) for branch in data[-1])
 
 
 def _unparse_max_repeat(data):

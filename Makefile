@@ -70,13 +70,16 @@ $(WORDLIST_DIR)/wikipedia-en-links.txt: $(WORDLIST_DIR)/wikipedia-en-links-orig.
 	sort -nrk 1 $< | $(PYTHON) scripts/transform_wp_freq.py > $@
 
 $(WORDLIST_DIR)/wordnet.txt: $(WORDLIST_DIR)/raw/wordnet.txt
-	LC_ALL=C egrep -h "^[A-Za-z0-9'/ -]+$$" $< | tr a-z A-Z | shell/freq1.sh > $@
+	LC_ALL=C egrep -h "^[A-Za-z0-9'/ -]+$$" $< | tr a-z A-Z | tr '-' ' ' | shell/freq1.sh > $@
 
 $(WORDLIST_DIR)/npl-allwords.txt: $(WORDLIST_DIR)/raw/npl_allwords2.txt
 	LC_ALL=C egrep -h "^[A-Za-z0-9' -]+$$" $< | tr a-z A-Z | shell/freq1.sh > $@
 
 $(WORDLIST_DIR)/combined.txt: $(WORDLISTS) scripts/build_combined.py
 	$(PYTHON) scripts/build_combined.py
+
+$(CORPUS_DIR)/wikipedia.txt: $(WORDLIST_DIR)/raw/wp-links.txt.gz scripts/join_wp_links.py
+	zcat $< | $(PYTHON) scripts/join_wp_links.py > $@
 
 $(SEARCH_DIR)/_MAIN_1.toc: scripts/build_search_index.py $(CORPUS_DIR)/crossword_clues.txt
 	$(PYTHON) scripts/build_search_index.py

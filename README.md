@@ -41,7 +41,7 @@ Quick start
 
     >>> from solvertools.all import *
     >>> search('rg.of.el.qu.ry')[0]
-    (-33.868139189898926, 'RGB OF RELIQUARY')
+    (11.1, 'RGB OF RELIQUARY')
 
 
 Where to find stuff
@@ -111,7 +111,7 @@ This module defines two wordlists as globals:
     False
 
 We'll use WORDS for the examples here, because it's the best suited for
-them. It's also built into top-level functions such as search() and 
+them. It's also built into top-level functions such as search() and
 cromulence().
 
 
@@ -133,7 +133,7 @@ text are written in capital letters.
     >>> slugify('ESCAPE FROM ZYZZLVARIA')
     'escapefromzyzzlvaria'
     >>> cromulence('escapefromzyzzlvaria')
-    (25.3, 'ESCAPE FROM ZYZZLVARIA')
+    (25.3, 'ESCAPE FROM ZYZZL VARIA')
 
 
 Cromulence

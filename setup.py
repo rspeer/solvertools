@@ -8,6 +8,6 @@ setup(
     version=VERSION,
     packages=find_packages(),
     install_requires=[
-        'nltk', 'whoosh', 'unidecode', 'natsort', 'flask', 'wordfreq'
+        'nltk', 'whoosh', 'unidecode', 'natsort', 'flask', 'wordfreq', 'tqdm'
     ],
 )

@@ -34,23 +34,18 @@ def init_search_index():
     ix = create_in(data_path('search'), schema)
     writer = ix.writer(procs=4)
 
-    # Add Wikipedia lead sections
-    try:
-        for line in tqdm(open(data_path('wordlists/raw/big/en-wp-2word-summaries.txt')), desc='wikipedia'):
-            title, summary = line.split('\t', 1)
-            summary = summary.rstrip()
-            title = sanitize(title.split(" (")[0]).upper()
-            if title and summary and 'may refer to' not in summary:
-                slug = slugify(title)
-                if WORDS.logprob(slug) > -17:
-                    writer.add_document(
-                        slug=slug,
-                        text=title,
-                        definition=summary,
-                        length=len(slug)
-                    )
-    except FileNotFoundError:
-        print("Skipping Wikipedia search index: en-wp-2word-summaries.txt not found")
+    # Add Wikipedia links
+    for line in tqdm(open(data_path('corpora/wikipedia.txt')), desc='wikipedia'):
+        title, summary = line.split('\t', 1)
+        summary = summary.rstrip()
+        if title and summary:
+            slug = slugify(title)
+            writer.add_document(
+                slug=slug,
+                text=title,
+                definition=summary,
+                length=len(slug)
+            )
 
     # Add lookups from a phrase to a word in that phrase
     for slug, freq, text in tqdm(WORDS.iter_all_by_freq(), desc='phrases'):

@@ -17,9 +17,15 @@ logger = logging.getLogger(__name__)
 
 
 # The NULL_HYPOTHESIS_ENTROPY is the log-probability per letter of something
-# that is just barely an answer, for which we use the entropy of the answer
-# "OTTO HID JAN'S KEY" (recalibrated in 2018).
-NULL_HYPOTHESIS_ENTROPY = -3.75
+# that is just barely an answer. We've tuned this, with the following criteria:
+#
+# - (recall) At least 98% of real Mystery Hunt answers should get positive cromulence
+# - (precision) Randomly-generated answers with letter frequencies should get negative
+#   cromulence as often as possible
+#
+# Currently the recall is 98.09%, and the precision averages about 96.5%.
+
+NULL_HYPOTHESIS_ENTROPY = -3.5
 DECIBEL_SCALE = 20 / log(10)
 
 
@@ -655,3 +661,7 @@ def find_by_alphagram(text):
 
 def find_by_consonantcy(text):
     return WORDS.find_by_consonantcy(consonantcy(slugify(text)))
+
+
+if __name__ == '__main__':
+    WORDS.test_cromulence()

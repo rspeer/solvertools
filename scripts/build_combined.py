@@ -4,14 +4,14 @@ from solvertools.wordlist import combine_wordlists, build_extras
 def build_combined_list():
     combine_wordlists([
         ('google-books', 1),
-        ('enable', 10),
-        ('twl06', 10),
-        ('csw-apr07', 10),
-        ('wikipedia-en-links', 100),
+        ('enable', 10000),
+        ('twl06', 10000),
+        ('csw-apr07', 10000),
+        ('wikipedia-en-links', 10000),
 #        ('wikipedia-en-titles', 1),
-        ('wordfreq', 50),
-        ('wordnet', 1000),
-        ('npl-allwords', 1)
+        ('wordfreq', 50000),
+        ('wordnet', 100000),
+        ('npl-allwords', 100)
     ], 'combined')
 
 

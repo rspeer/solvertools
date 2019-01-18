@@ -31,8 +31,8 @@ To install the code in this environment, run:
 
 You'll need data, which you can download:
 
-    wget https://tools.ireproof.org/static/solvertools-data-2019.tar.gz
-    tar xvf solvertools-2018-data.tar.gz
+    wget http://tools.ireproof.org/static/solvertools-data-2019.tar.gz
+    tar xvf solvertools-data-2019.tar.gz
 
 
 Quick start

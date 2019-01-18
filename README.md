@@ -1,6 +1,6 @@
 Prerequisites
 =============
-You need Python 3.4+, Make, and GNU tools such as 'grep' and 'sort'.
+You need Python 3.6+, Make, and GNU tools such as 'grep' and 'sort'.
 
 To set up Solvertools, run `setup.py develop` (not `install`) in your
 appropriately-configured Python environment.
@@ -12,13 +12,13 @@ The best way to install Python packages is in a virtual environment,
 which points `python` in your shell to a local copy. On many systems, you
 could run:
 
-    pyvenv-3.4 env
+    python3.6 -m venv env
     source env/bin/activate
 
 But Ubuntu broke pyvenv, so use Ubuntu's virtualenv instead:
 
     sudo apt-get install python-virtualenv
-    virtualenv --python=python3.4 env
+    virtualenv --python=python3.6 env
     source env/bin/activate
 
 To install the code in this environment, run:
@@ -29,10 +29,9 @@ To install the code in this environment, run:
 
     sudo python3 setup.py develop
 
-You'll need data. You could try to build it with the Makefile. Or you could
-just download it:
+You'll need data, which you can download:
 
-    wget https://s3.amazonaws.com/ireproof/solvertools-2018-data.tar.gz
+    wget https://tools.ireproof.org/static/solvertools-data-2019.tar.gz
     tar xvf solvertools-2018-data.tar.gz
 
 

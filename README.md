@@ -41,7 +41,7 @@ Quick start
 
     >>> from solvertools.all import *
     >>> search('rg.of.el.qu.ry')[0]
-    (11.1, 'RGB OF RELIQUARY')
+    (14.9, 'RGB OF RELIQUARY')
 
 
 Where to find stuff
@@ -140,65 +140,40 @@ Cromulence
 ==========
 
 "Cromulence" is how valid a sequence of letters is as a clue or a puzzle
-answer. It's measured in dB, kinda, with the reference point of 0 dB being the
-awkward meta-answer "OUI, PAREE'S GAY".
+answer. It's measured in dB, kinda. The zero point is the cutoff for whether
+it considers it a real answer.
+
+(We used to tune this point to various difficult-to-recognize puzzle answers,
+but now it's just tuned to optimize the precision-recall tradeoff.)
 
 Cromulence is rounded to one decimal place to avoid implying unreasonable
 precision, and so that it's visually distinguishable from log probability in
 Python output. The possible values seem to range from -45 to 35.
 
-Positive cromulences correspond to real answers, with a precision of 99% and
-a recall of 86%, in a test against distractors made of random letters selected
+Positive cromulences correspond to real answers, with a precision of 96% and
+a recall of 98%, in a test against distractors made of random letters selected
 from an English letter distribution.
 
 The `cromulence` function (a shorthand for `WORDS.cromulence`) won't fill in
 blanks or regular expressions. Use `search` for that.
 
     >>> from solvertools.all import cromulence
+    >>> cromulence('mobilesuitgundam')
+    (21.6, 'MOBILE SUIT GUNDAM')
     >>> cromulence('mulugetawendimu')
-    (25.1, 'MULUGETA WENDIMU')
-
+    (18.7, 'MULUGETA WENDIMU')
     >>> cromulence('rgbofreliquary')
-    (14.9, 'RGB OF RELIQUARY')
-
+    (8.9, 'RGB OF RELIQUARY')
     >>> cromulence('atzerodtorvolokheg')
-    (8.8, 'ATZERODT OR VOLOKH EG')
-
-    >>> cromulence('turkmenhowayollary')   # wrong spacing
-    (6.7, 'TURKMEN HOW AYO LLARY')
-
+    (3.2, 'ATZERODT OR VOLOKH EG')
+    >>> cromulence('turkmenhowayollary')
+    (0.4, 'TURKMEN HOW A YOLLA RY')
     >>> cromulence('ottohidjanskey')
-    (3.9, 'OTTO HID JANS KEY')
-
+    (-1.7, "OTTO HID JAN'S KEY")
     >>> cromulence('ouipareesgay')
-    (-0.0, "OUI PAREE 'S GAY")
-
-    >>> cromulence('yoryu')                # wrong spacing
-    (-6.2, 'YOR YU')
-
-In case you're wondering, the least-cromulent Mystery Hunt clues and answers
-that this metric finds are:
-
-    -6.2  YORYU
-    -2.5  N
-    -1.6  E
-    -0.7  HUERFANA
-    0.0   OUI PAREE'S GAY
-    0.0   OCEAN E HQ
-    0.4   UV
-    1.0   IO
-    1.2   BABE WYNERY
-    1.2   HIFIS
-    1.8   ACQUIL
-    2.3   ALT F FOUR
-    3.9   OTTO HID JAN'S KEY
-    5.1   V NECK
-    5.0   PREW
-    5.4   DIN
-    6.3   NEA
-    6.7   KLAK RING
-    6.7   QUEUER
-    6.8   WEBISMS
+    (-6.0, 'OUI PA REES GAY')
+    >>> cromulence('yoryu')
+    (-7.6, 'YO RYU')
 
 
 Searching by patterns and clues
@@ -215,8 +190,8 @@ there was a clue.
     'BARBECUE'
     >>> search(clue='Lincoln assassin', length=15)[0][1]
     'JOHN WILKES BOOTH'
-    >>> search(clue='US president', pattern='.a....e.')[0][1]
-    'VAN BUREN'
+    >>> search(clue='US president', pattern='.a.f....')[0][1]
+    'GARFIELD'
 
 
 Examples

@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-VERSION = "2017.0"
+VERSION = "2019.0"
 
 from setuptools import find_packages, setup
 

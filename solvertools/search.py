@@ -75,8 +75,8 @@ def search(pattern=None, clue=None, length=None, count=20):
 
     >>> search('.a.b.c..')[0][1]
     'BARBECUE'
-    >>> search('.a....e.', clue='US President')[0][1]
-    'VAN BUREN'
+    >>> search('.a.f....', clue='US President')[0][1]
+    'GARFIELD'
     >>> search(clue='lincoln assassin', length=15)[0][1]
     'JOHN WILKES BOOTH'
     """

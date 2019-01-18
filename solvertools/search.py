@@ -1,57 +1,71 @@
 from solvertools.wordlist import WORDS
 from solvertools.normalize import slugify, sanitize
-from solvertools.util import data_path
-from whoosh.index import open_dir
-from whoosh.analysis import StandardAnalyzer
-from whoosh import qparser
+from solvertools.util import data_path, db_path
+from wordfreq import tokenize
 from operator import itemgetter
 from collections import defaultdict
 from .conceptnet_numberbatch import load_numberbatch, get_vector, similar_to_term
 import re
+import sqlite3
 
-INDEX = None
-QUERY_PARSER = None
 NUMBERBATCH = None
-ANALYZER = StandardAnalyzer()
+DB = None
 
 
-def simple_parser(fieldname, schema, group, **kwargs):
-    """
-    Returns a QueryParser configured to support only +, -, and phrase
-    syntax.
+def query_expand(word):
+    global NUMBERBATCH
+    if NUMBERBATCH is None:
+        NUMBERBATCH = load_numberbatch()
 
-    Modified from Whoosh's SimpleParser to accept a custom 'group'
-    argument.
-    """
-
-    pins = [qparser.plugins.WhitespacePlugin,
-            qparser.plugins.PlusMinusPlugin,
-            qparser.plugins.PhrasePlugin]
-    orgroup = qparser.syntax.OrGroup
-    return qparser.QueryParser(
-        fieldname, schema, plugins=pins, group=orgroup,
-        **kwargs
-    )
+    similar = similar_to_term(NUMBERBATCH, word, limit=25)
+    sim_words = [word2.replace('"','') for word2, sim in similar.items() if sim >= 0.2]
+    parts = [word] + [word2 for word2 in sim_words if word2 != word]
+    query = ' OR '.join('"%s"' % word2 for word2 in parts)
+    return '(%s)' % query
 
 
-def tokenize(text):
-    return [tok.text for tok in ANALYZER(text)]
+def db_search(query, limit=10000):
+    global DB
+    if DB is None:
+        DB = sqlite3.connect(db_path("search.db"), check_same_thread=False)
+
+    cur = DB.cursor()
+    results = defaultdict(float)
+    for (keyword, negscore) in cur.execute("SELECT keyword, bm25(clues) AS score FROM clues WHERE text MATCH ? LIMIT ?", (query, limit)):
+        assert negscore < 0
+        results[keyword] -= negscore
+    return results
 
 
-def query_expand(numberbatch, words, limit=50):
-    weighted_words = defaultdict(float)
-    for word in words:
-        similar = similar_to_term(numberbatch, word, limit=25)
-        this_weight = min(20, -WORDS.logprob(word)) / 20
-        weighted_words[sanitize(word)] += this_weight
-        for word2, sim in similar.items():
-            weighted_words[sanitize(word2)] += sim * this_weight
-    words_and_weights = sorted(weighted_words.items(), key=itemgetter(1), reverse=True)[:limit]
-    query_parts = [
-        '(%s)^%3.3f' % (word, weight)
-        for (word, weight) in words_and_weights
-    ]
-    return ' '.join(query_parts), words_and_weights
+def db_rank(clue):
+    scores = defaultdict(float)
+    for match, score in db_search(clue).items():
+        scores[slugify(match)] += score * 1000
+        parts = tokenize(match, 'en')
+        for part in parts:
+            scores[slugify(part)] += score * 1000 / len(parts)
+
+    for word in tokenize(clue, 'en'):
+        logprob_result = WORDS.segment_logprob(slugify(word))
+        if logprob_result is not None:
+            logprob, _ = logprob_result
+        else:
+            logprob = -1000.
+        rare_boost = min(25., -logprob)
+        for match, score in db_search(word).items():
+            scores[slugify(match)] += rare_boost * score * 10
+            parts = tokenize(match, 'en')
+            for part in parts:
+                scores[slugify(part)] += rare_boost * score * 10 / len(parts)
+
+        query = query_expand(word)
+        for match, score in db_search(query).items():
+            scores[slugify(match)] += rare_boost * score
+            parts = tokenize(match, 'en')
+            for part in parts:
+                scores[slugify(part)] += rare_boost * score / len(parts)
+
+    return scores
 
 
 def search(pattern=None, clue=None, length=None, count=20):
@@ -66,7 +80,6 @@ def search(pattern=None, clue=None, length=None, count=20):
     >>> search(clue='lincoln assassin', length=15)[0][1]
     'JOHN WILKES BOOTH'
     """
-    global INDEX, QUERY_PARSER, NUMBERBATCH
     if clue is None:
         if pattern is None:
             return []
@@ -77,43 +90,13 @@ def search(pattern=None, clue=None, length=None, count=20):
         pattern = pattern.lstrip('^').rstrip('$').lower()
         pattern = re.compile('^' + pattern + '$')
 
-    if INDEX is None:
-        INDEX = open_dir(data_path('search'))
-        QUERY_PARSER = simple_parser(
-            fieldname="definition", schema=INDEX.schema,
-            group=qparser.OrGroup.factory(0.9)
-        )
-        QUERY_PARSER.add_plugin(qparser.GroupPlugin())
-        QUERY_PARSER.add_plugin(qparser.BoostPlugin())
-
-    if NUMBERBATCH is None:
-        NUMBERBATCH = load_numberbatch()
-
+    raw_matches = sorted(db_rank(clue).items(), key=itemgetter(1), reverse=True)
     matches = {}
-    with INDEX.searcher() as searcher:
-        clue_parts = tokenize(clue)
-        expanded, similar = query_expand(NUMBERBATCH, clue_parts)
-        clue_slugs = [slugify(part) for part in clue_parts]
-        new_clue = '%s, %s' % (sanitize(clue), expanded)
-        results = searcher.search(QUERY_PARSER.parse(new_clue), limit=None)
-        for word, weight in similar:
-            slug = slugify(word)
-            if slug not in clue_slugs:
-                if length is None or length == len(slug):
-                    if pattern is None or pattern.match(slug):
-                        matches[word.upper()] = weight * 1000
-        for i, result in enumerate(results):
-            text = result['text']
-            if any(c.isdigit() for c in text):
-                continue
-            slug = slugify(text)
-            if length is None or length == len(slug):
-                if pattern is None or pattern.match(slug):
-                    score = results.score(i)
-                    if text in matches:
-                        matches[text] += score
-                    else:
-                        matches[text] = score
-                    if len(matches) >= count:
-                        break
-        return sorted([(score, text) for (text, score) in matches.items()], reverse=True)
+    for slug, score in raw_matches:
+        if length is None or length == len(slug):
+            if pattern is None or pattern.match(slug):
+                crom, text = WORDS.cromulence(slug)
+                matches[text] = score
+        if len(matches) >= count:
+            break
+    return sorted([(score, text) for (text, score) in matches.items()], reverse=True)

@@ -26,7 +26,7 @@ WORDLISTS = $(WORDLIST_DIR)/enable.txt $(WORDLIST_DIR)/twl06.txt \
 # no longer used:
 #	$(WORDLIST_DIR)/wikipedia-en-titles.txt \
 
-search: $(SEARCH_DIR)/_MAIN_1.toc
+search: $(DB_DIR)/search.db
 
 wordlists: $(WORDLISTS) $(WORDLIST_DIR)/combined.txt $(WORDLIST_DIR)/combined.freq.txt
 
@@ -83,10 +83,10 @@ $(CORPUS_DIR)/wikipedia.txt: $(WORDLIST_DIR)/raw/wp-links.txt.gz scripts/join_wp
 	zcat $< | $(PYTHON) scripts/join_wp_links.py > $@
 
 $(CORPUS_DIR)/all.txt: $(CORPUS_DIR)/wikipedia.txt $(CORPUS_DIR)/crossword_clues.txt $(CORPUS_DIR)/more_crossword_clues.txt
-	cat $< | tr '"' ' ' > $@
+	cat $^ | tr '"' ' ' > $@
 
 $(DB_DIR)/search.db: $(CORPUS_DIR)/all.txt
-	sqlite3 $@ < scripts/load_clues.sql
+	rm -f $@ && sqlite3 $@ < scripts/load_clues.sql
 
 $(SEARCH_DIR)/_MAIN_1.toc: scripts/build_search_index.py $(CORPUS_DIR)/crossword_clues.txt
 	$(PYTHON) scripts/build_search_index.py

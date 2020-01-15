@@ -5,6 +5,8 @@ data/wordlists/*.txt
 data/wordlists/greppable/
 data/wordlists/alphabytes/
 data/wordlists/raw/
+data/corpora/wikipedia.txt
+data/corpora/all.txt
 env/
 build/
 dist/

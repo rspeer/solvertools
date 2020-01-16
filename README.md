@@ -103,12 +103,14 @@ This module defines two wordlists as globals:
   The frequency only indicates the number of Scrabble lists the word
   is found in, out of three: ENABLE2K, TWL06, and CSW2019.
 
-    >>> 'qat' in SCRAB
-    True
-    >>> 'phonies' in SCRAB
-    False
-    >>> 'retweet' in SCRAB   # now that we have the 2019 list
-    True
+      >>> 'qat' in SCRAB
+      True
+
+      >>> 'phonies' in SCRAB
+      False
+
+      >>> 'retweet' in SCRAB   # now that we have the 2019 list
+      True
 
 We'll use WORDS for the examples here, because it's the best suited for
 them. It's also built into top-level functions such as search() and

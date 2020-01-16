@@ -31,8 +31,8 @@ To install the code in this environment, run:
 
 You'll need data, which you can download:
 
-    wget https://tools.ireproof.org/static/solvertools-data-2019.tar.gz
-    tar xvf solvertools-2018-data.tar.gz
+    wget https://tools.ireproof.org/static/solvertools-data-2020.tar.gz
+    tar xvf solvertools-data-2020.tar.gz
 
 
 Quick start
@@ -101,13 +101,14 @@ This module defines two wordlists as globals:
 - SCRAB, a list of words that "have the Scrabble nature". Many wordlist
   features don't work on this list, because it is a binary decision.
   The frequency only indicates the number of Scrabble lists the word
-  is found in, out of three: ENABLE2K, TWL06, and Collins April 2007
-  (a successor to SOWPODS, although not the most up-to-date one).
+  is found in, out of three: ENABLE2K, TWL06, and CSW2019.
 
     >>> 'qat' in SCRAB
     True
     >>> 'phonies' in SCRAB
     False
+    >>> 'retweet' in SCRAB   # now that we have the 2019 list
+    True
 
 We'll use WORDS for the examples here, because it's the best suited for
 them. It's also built into top-level functions such as search() and

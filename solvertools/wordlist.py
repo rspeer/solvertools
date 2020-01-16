@@ -413,7 +413,7 @@ class Wordlist:
                     (slug, freq, text)
                 )
                 total += freq
-                if i % 10000 == 0:
+                if i % 100000 == 0:
                     print("\t%s,%s" % (text, freq))
 
             # Use the empty string to record the total
@@ -438,7 +438,7 @@ class Wordlist:
                     "VALUES (?, ?, ?, ?)",
                     (slug, alpha, ana, cons)
                 )
-                if i % 10000 == 0:
+                if i % 100000 == 0:
                     print("\t%s" % (text))
 
     def write_greppable_lists(self):
@@ -460,7 +460,7 @@ class Wordlist:
             if 1 <= length <= self.max_indexed_length:
                 out = length_files[length]
                 print("%s,%d" % (slug, freq), file=out)
-            if i % 10000 == 0:
+            if i % 100000 == 0:
                 print("\t%s,%d" % (slug, freq))
             i += 1
         for file in length_files.values():
@@ -619,8 +619,8 @@ def combine_wordlists(weighted_lists, out_name):
             if slug not in texts or (freq * weight) > freqs[slug]:
                 texts[slug] = text
             freqs[slug] += freq * weight
-            if i % 10000 == 0:
-                print("\t%s,%s" % (text, freq))
+            if i % 100000 == 0:
+                print("\t%s,%s" % (text, freq * weight))
 
     alphabetized = sorted(list(texts))
     out_filename = wordlist_path_from_name(out_name)
@@ -629,7 +629,7 @@ def combine_wordlists(weighted_lists, out_name):
         for i, slug in enumerate(alphabetized):
             line = "%s,%s" % (texts[slug], int(freqs[slug]))
             print(line, file=out)
-            if i % 10000 == 0:
+            if i % 100000 == 0:
                 print("\t%s,%s" % (texts[slug], int(freqs[slug])))
 
 

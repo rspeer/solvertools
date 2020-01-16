@@ -89,8 +89,10 @@ def search(pattern=None, clue=None, length=None, count=20):
     'JOHN WILKES BOOTH'
 
     If the pattern contains spaces, we require the spacing of the text to match.
-    >>> search('s.... s......', clue='NASA vehicle')[0][1]
+    >>> search('....e .......', clue='NASA vehicle')[0][1]
     'SPACE SHUTTLE'
+    >>> search('....e.......', clue='NASA vehicle')[0][1]
+    'CARTERCOPTER'
     >>> search('[jkl][def][def][tuv] [mno][tuv][tuv]')[0][1]
     'LEFT OUT'
     """

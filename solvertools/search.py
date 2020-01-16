@@ -89,6 +89,8 @@ def search(pattern=None, clue=None, length=None, count=20):
     'JOHN WILKES BOOTH'
 
     If the pattern contains spaces, we require the spacing of the text to match.
+    >>> search('s.... s......', clue='NASA vehicle')[0][1]
+    'SPACE SHUTTLE'
     >>> search('[jkl][def][def][tuv] [mno][tuv][tuv]')[0][1]
     'LEFT OUT'
     """
@@ -96,14 +98,20 @@ def search(pattern=None, clue=None, length=None, count=20):
         if pattern is None:
             return []
         else:
-            found = WORDS.search(pattern, count=count * 10, length=length, use_cromulence=True)
+            scount = count
+            if ' ' in pattern:
+                scount *= 10
+            found = WORDS.search(pattern, count=scount, length=length, use_cromulence=True)
             results = []
             for (score, text) in found:
                 if required_spaces_match(pattern, text):
                     results.append((score, text))
                     if len(results) >= count:
                         break
-            return results
+            if results:
+                return results
+            else:
+                return found[:count]
 
     if pattern is not None:
         pattern_re_text = pattern.lstrip('^').rstrip('$').replace(' ', '').lower()

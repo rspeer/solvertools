@@ -627,10 +627,12 @@ def combine_wordlists(weighted_lists, out_name):
     with open(out_filename, 'w', encoding='utf-8') as out:
         print("Writing %r" % out)
         for i, slug in enumerate(alphabetized):
-            line = "%s,%s" % (texts[slug], int(freqs[slug]))
-            print(line, file=out)
+            freq = int(freqs[slug])
+            if freq > 0:
+                line = "%s,%s" % (texts[slug], freq)
+                print(line, file=out)
             if i % 100000 == 0:
-                print("\t%s,%s" % (texts[slug], int(freqs[slug])))
+                print("\t%s,%s" % (texts[slug], freq))
 
 
 def build_extras(name):

@@ -195,6 +195,17 @@ there was a clue.
     >>> search(clue='US president', pattern='.a.f....')[0][1]
     'GARFIELD'
 
+If the pattern contains spaces, we require the spacing of the text to match.
+
+    >>> search('....e.......', clue='NASA vehicle')[0][1]
+    'CARTERCOPTER'
+    >>> search('....e .......', clue='NASA vehicle')[0][1]
+    'SPACE SHUTTLE'
+
+(This implementation is pretty rough; it just checks the spaces after trying
+a bunch of words that match the pattern. If it doesn't find any, it gives up
+and gives you the version that ignores spaces, just so that it isn't implying
+there are no matches.)
 
 Examples
 ========

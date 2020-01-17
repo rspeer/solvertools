@@ -5,7 +5,7 @@ from sre_parse import parse, CATEGORIES, SPECIAL_CHARS, SubPattern
 from sre_constants import MAXREPEAT   # this is a quantity, not an enum
 from sre_constants import (
     MAX_REPEAT, LITERAL, IN, CATEGORY, ANY, SUBPATTERN, BRANCH,
-    AT_BEGINNING, AT_END
+    AT_BEGINNING, AT_END, NOT_LITERAL, NEGATE
 )
 import re
 
@@ -113,7 +113,13 @@ def _regex_len_pattern(pattern):
             sub_lo, sub_hi = _regex_len_branch(data[-1])
         elif op == MAX_REPEAT:
             sub_lo, sub_hi = _regex_len_repeat(data)
-        elif op == AT:
+        elif op == AT_BEGINNING:
+            sub_lo = sub_hi = 0
+        elif op == AT_END:
+            sub_lo = sub_hi = 0
+        elif op == NOT_LITERAL:
+            sub_lo = sub_hi = 1
+        elif op == NEGATE:
             sub_lo = sub_hi = 0
         else:
             raise ValueError(
@@ -198,6 +204,11 @@ def _regex_index(struct, index):
             return _regex_index_branch(data[-1], index)
         elif opcode == MAX_REPEAT:
             return _regex_index_repeat(data, index)
+        elif opcode == NOT_LITERAL:
+            raise NotImplementedError
+        elif opcode == NEGATE:
+            print(struct)
+            raise NotImplementedError
         else:
             raise ValueError("I don't know what to do with this regex: "
                              + str(struct))
@@ -289,7 +300,9 @@ def _regex_index_pattern(pattern, index):
 
 
 def unparse(struct):
-    if isinstance(struct, (list, SubPattern)):
+    if isinstance(struct, list):
+        return ''.join(unparse(x) for x in struct)        
+    if isinstance(struct, SubPattern):
         return ''.join(unparse(x) for x in struct)
     elif isinstance(struct, tuple):
         opcode, data = struct
@@ -360,3 +373,18 @@ def _unparse_at(data):
     else:
         raise ValueError
 
+
+def _unparse_at_beginning(data):
+    return '^'
+
+
+def _unparse_at_end(data):
+    return '$'
+
+
+def _unparse_not_literal(data):
+    return '[^{}]'.format(chr(data))
+
+
+def _unparse_negate(data):
+    return '^'

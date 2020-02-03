@@ -55,7 +55,7 @@ $(WORDLIST_DIR)/google-books-1grams.freq.txt: $(WORDLIST_DIR)/google-books-1gram
 $(WORDLIST_DIR)/enable.txt: $(WORDLIST_DIR)/raw/enable.txt shell/freq1.sh
 	tr a-z A-Z < $< | shell/freq1.sh > $@
 
-$(WORDLIST_DIR)/csw-apr07.txt: $(WORDLIST_DIR)/raw/csw-apr07.txt shell/freq1.sh
+$(WORDLIST_DIR)/csw2019.txt: $(WORDLIST_DIR)/raw/csw2019.txt shell/freq1.sh
 	shell/freq1.sh < $< > $@
 
 $(WORDLIST_DIR)/twl06.txt: $(WORDLIST_DIR)/raw/twl06.txt shell/freq1.sh

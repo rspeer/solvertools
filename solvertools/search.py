@@ -68,6 +68,14 @@ def db_rank(clue):
     return scores
 
 
+def required_spaces_match(pattern, text):
+    if ' ' not in pattern:
+        return True
+    pattern_re_text = pattern.lstrip('^').rstrip('$')
+    pattern_re = re.compile('^' + pattern_re_text + '$')
+    return bool(pattern_re.match(text.lower()))
+
+
 def search(pattern=None, clue=None, length=None, count=20):
     """
     Find words and phrases that match various criteria: a regex pattern,
@@ -79,24 +87,48 @@ def search(pattern=None, clue=None, length=None, count=20):
     'GARFIELD'
     >>> search(clue='lincoln assassin', length=15)[0][1]
     'JOHN WILKES BOOTH'
+
+    If the pattern contains spaces, we require the spacing of the text to match.
+    >>> search('....e .......', clue='NASA vehicle')[0][1]
+    'SPACE SHUTTLE'
+    >>> search('....e.......', clue='NASA vehicle')[0][1]
+    'CARTERCOPTER'
+    >>> search('[jkl][def][def][tuv] [mno][tuv][tuv]')[0][1]
+    'LEFT OUT'
     """
     if clue is None:
         if pattern is None:
             return []
         else:
-            return WORDS.search(pattern, count=count, use_cromulence=True)
+            scount = count
+            if ' ' in pattern:
+                scount *= 10
+            found = WORDS.search(pattern, count=scount, length=length, use_cromulence=True)
+            results = []
+            for (score, text) in found:
+                if required_spaces_match(pattern, text):
+                    results.append((score, text))
+                    if len(results) >= count:
+                        break
+            if results:
+                return results
+            else:
+                return found[:count]
 
     if pattern is not None:
-        pattern = pattern.lstrip('^').rstrip('$').lower()
-        pattern = re.compile('^' + pattern + '$')
+        pattern_re_text = pattern.lstrip('^').rstrip('$').replace(' ', '').lower()
+        pattern_re = re.compile('^' + pattern_re_text + '$')
+    else:
+        pattern_re = None
 
     raw_matches = sorted(db_rank(clue).items(), key=itemgetter(1), reverse=True)
     matches = {}
     for slug, score in raw_matches:
         if length is None or length == len(slug):
-            if pattern is None or pattern.match(slug):
+            if pattern is None or pattern_re.match(slug):
                 crom, text = WORDS.cromulence(slug)
-                matches[text] = score
+                if pattern is None or required_spaces_match(pattern, text):
+                    matches[text] = score
         if len(matches) >= count:
             break
     return sorted([(score, text) for (text, score) in matches.items()], reverse=True)

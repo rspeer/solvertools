@@ -13,7 +13,7 @@ def build_scrabblish_list():
     combine_wordlists([
         ('enable', 1),
         ('twl06', 1),
-        ('csw-apr07', 1)
+        ('csw2019', 1)
     ], 'scrab')
 
 

@@ -121,9 +121,9 @@ def brute_force_diagonalize(answers, wordlist=WORDS, quiet=False):
     Cromulence Text    Info
     9.5        RUN EAST
     9.2        MIX LAST
+    9.1        MAX LAST
     9.1        BE NOISY
-    9.0        MAX LAST
-    8.7        LINE TO I
+    8.8        LINE TO I
     ...
     (9.5, 'RUN EAST', None)
 

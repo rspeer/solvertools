@@ -494,31 +494,34 @@ class Wordlist:
 
     def test_cromulence(self):
         """
-        More trivia about cromulence:
+        This test runs a corpus of past Mystery Hunt answers through the cromulence
+        function, so we can tune it to return positive numbers for real answers.
 
-        The most interesting cromulent fake answers, made of random letters, that
-        came out in several runs of testing were:
+        It does this by generating fake answers with the lengths of real answers, but
+        with the letters drawn randomly from a unigram distribution.
 
-            17  ALCUNI
-            15  CLANKS
-            12  LEVERDSEE
-            9   DTANDISCODE
-            9   ITOO
-            9   DRCELL
-            9   LEERECHO
-            7   EBOLASOSIT
-            7   RAGEMYLADSOK
+        Sometimes this comes up with neat fake answers such as:
 
-        Those would be good inputs for a game of Metapuzzle Spaghetti.
+            7.4  ON FRODO
+            6.8  ENIAC
+            6.6  AS I CAN
+            6.4  IBM STOP
+            5.4  AIR LOL
+            3.8  USE MIT
+            3.7  VON POOPIN
+            2.1  NA BEER
+            0.2  DNA ARRRGH AH
         """
         real_answers = []
-        for year in ['2004', '2005', '2006', '2007', '2008', '2011', '2012']:
-            with open(corpus_path('answers/mystery%s.txt' % year)) as file:
+        years = ['1994', '1997'] + [str(year) for year in range(1999, 2021)]
+        for year in years:
+            with open(corpus_path('mh_answers/mystery%s.txt' % year)) as file:
                 for line in file:
                     line = line.strip()
                     if line:
                         answer, _typ = line.rsplit(',', 1)
-                        real_answers.append(answer)
+                        if slugify(answer):
+                            real_answers.append(answer)
         fake_answers = [
             random_letters(len(real)) for real in real_answers
         ]
@@ -608,7 +611,7 @@ def combine_wordlists(weighted_lists, out_name):
         for i, slug, freq, text in read_wordlist(name):
             # Turns out that things that just barely make our cutoff from
             # Google Books are worse than you'd think
-            if name == 'google-books':
+            if name == 'google-books-1grams':
                 freq -= 1000
                 if freq <= 0:
                     continue

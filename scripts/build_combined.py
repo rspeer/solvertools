@@ -3,15 +3,16 @@ from solvertools.wordlist import combine_wordlists, build_extras
 
 def build_combined_list():
     combine_wordlists([
-        ('google-books', 1),
-        ('enable', 100),
-        ('twl06', 100),
-        ('csw-apr07', 1000),
-        ('wikipedia-en-links', 1000),
+        ('google-books-1grams', 1),
+        ('google-books-phrases', 1),
+        ('enable', 1000),
+        ('twl06', 1000),
+        ('csw2019', 10000),
+        ('wikipedia-en-links', 10000),
 #        ('wikipedia-en-titles', 1),
-        ('wordfreq', 10000),
-        ('wordnet', 10000),
-        ('npl-allwords', 10)
+        ('wordfreq', 100000),
+        ('wordnet', 100000),
+        ('npl-allwords', 1000)
     ], 'combined')
 
 

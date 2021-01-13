@@ -1,0 +1,66 @@
+BASE,Puzzle
+BOSTON,Puzzle
+RAP,Puzzle
+ACROSS THE HALL,Puzzle
+FREE,Puzzle
+186,Puzzle
+SKY,Puzzle
+EAST,Puzzle
+SUN,Puzzle
+BLAST FURNACE,Puzzle
+CORNER,Puzzle
+180 DEGREES,Puzzle
+BRAIN,Puzzle
+WIDDERSHINS,Puzzle
+SOME,Puzzle
+58,Puzzle
+EYE,Puzzle
+DOOR,Puzzle
+EAR,Puzzle
+ON THE RIGHT,Puzzle
+CAR,Puzzle
+EXIT,Puzzle
+DISC,Puzzle
+120,Puzzle
+WIND,Puzzle
+PANE,Puzzle
+RAG,Puzzle
+NORTH,Puzzle
+SNOW,Puzzle
+RIGHT,Puzzle
+SOFT,Puzzle
+T,Puzzle
+BED,Puzzle
+RIGHT,Puzzle
+FIRE,Puzzle
+WEST,Puzzle
+BARN,Puzzle
+SOUTH,Puzzle
+HEAD,Puzzle
+NEXT,Puzzle
+RING,Puzzle
+LEFT,Puzzle
+BACK,Puzzle
+END,Puzzle
+CON,Puzzle
+LEFT,Puzzle
+LIFE,Puzzle
+MANOMET,Puzzle
+KEY,Puzzle
+BASEMENT,Puzzle
+AIR,Puzzle
+ON THE FAR SIDE OF THIS CORRIDOR,Puzzle
+SHORT,Puzzle
+TEN,Puzzle
+HAND,Puzzle
+OVERHEAD LIGHT FIXTURE,Puzzle
+HORSE,Puzzle
+DOWN,Puzzle
+MEAN,Puzzle
+630 DEGREES,Puzzle
+DECK,Puzzle
+DEASIL,Puzzle
+DATE,Puzzle
+NEW SALEM,Puzzle
+NIGHT,Puzzle
+BLACK,Puzzle

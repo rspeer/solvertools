@@ -8,6 +8,8 @@ appropriately-configured Python environment.
 Getting an appropriately-configured Python environment
 ------------------------------------------------------
 
+**These instructions are for Linux or WSL. I also sorta made it work on Windows -- see below.**
+
 The best way to install Python packages is in a virtual environment,
 which points `python` in your shell to a local copy. On many systems, you
 could run:
@@ -33,6 +35,30 @@ You'll need data, which you can download:
 
     wget http://tools.ireproof.org/static/solvertools-data-2021.zip
     unzip solvertools-data-2021.zip
+
+Partial instructions for setting up on Windows
+----------------------------------------------
+
+There are a zillion different ways to set up Python on Windows, so I can't give
+full detail about all the steps you might need to go through, but try this:
+
+- Get an official version of Python for Windows from python.org
+- When you install it, make sure to add Python to the PATH
+- Clone this solvertools repository using git
+- At your command prompt (cmd or powershell), go to the solvertools directory and run:
+
+```
+py -m pip install .
+```
+
+- Get the data from http://tools.ireproof.org/static/solvertools-data-2021.zip
+- Unzip it in the solvertools directory, so that it populates the `solvertools/data` directory
+- Test whether it worked:
+
+```
+py -m pip install pytest
+py -m pytest
+```
 
 
 Quick start

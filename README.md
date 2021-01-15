@@ -12,13 +12,13 @@ The best way to install Python packages is in a virtual environment,
 which points `python` in your shell to a local copy. On many systems, you
 could run:
 
-    python3.6 -m venv env
+    python3 -m venv env
     source env/bin/activate
 
 But Ubuntu broke pyvenv, so use Ubuntu's virtualenv instead:
 
     sudo apt-get install python-virtualenv
-    virtualenv --python=python3.6 env
+    virtualenv --python=/usr/bin/python3 env
     source env/bin/activate
 
 To install the code in this environment, run:
@@ -31,8 +31,8 @@ To install the code in this environment, run:
 
 You'll need data, which you can download:
 
-    wget http://tools.ireproof.org/static/solvertools-data-2020.tar.gz
-    tar xvf solvertools-data-2020.tar.gz
+    wget http://tools.ireproof.org/static/solvertools-data-2021.zip
+    unzip solvertools-data-2021.zip
 
 
 Quick start

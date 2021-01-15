@@ -209,7 +209,7 @@ class Wordlist:
                 self._grep_maps[cur_length] = mm
             else:
                 mm = self._grep_maps[cur_length]
-            pbytes = pattern.encode('ascii')
+            pbytes = pattern.encode('ascii').replace(b'[^',b'[^,')
             pattern1 = b'^' + pbytes + b','
             pattern2 = b'\n' + pbytes + b','
             match = re.match(pattern1, mm)

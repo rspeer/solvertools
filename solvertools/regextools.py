@@ -193,7 +193,7 @@ def _regex_index(struct, index):
         return _regex_index_pattern(struct, index)
     else:
         opcode, data = struct
-        if opcode in (LITERAL, IN, CATEGORY, ANY):
+        if opcode in (LITERAL, IN, CATEGORY, ANY, NOT_LITERAL):
             if index == 0:
                 return [[struct]]
             else:
@@ -204,8 +204,6 @@ def _regex_index(struct, index):
             return _regex_index_branch(data[-1], index)
         elif opcode == MAX_REPEAT:
             return _regex_index_repeat(data, index)
-        elif opcode == NOT_LITERAL:
-            raise NotImplementedError
         elif opcode == NEGATE:
             print(struct)
             raise NotImplementedError

@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-VERSION = "2020.0"
+VERSION = "2021.0"
 
 from setuptools import find_packages, setup
 

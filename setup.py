@@ -8,6 +8,6 @@ setup(
     version=VERSION,
     packages=find_packages(),
     install_requires=[
-        'nltk', 'pandas', 'unidecode', 'natsort', 'flask', 'wordfreq', 'tqdm'
+        'pandas', 'unidecode', 'natsort', 'flask', 'tqdm'
     ],
 )

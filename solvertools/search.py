@@ -1,9 +1,9 @@
 from solvertools.wordlist import WORDS
 from solvertools.normalize import slugify, sanitize
 from solvertools.util import data_path, db_path
-from wordfreq import tokenize
 from operator import itemgetter
 from collections import defaultdict
+from unidecode import unidecode
 from .conceptnet_numberbatch import load_numberbatch, get_vector, similar_to_term
 import re
 import sqlite3
@@ -11,6 +11,8 @@ import sqlite3
 NUMBERBATCH = None
 DB = None
 
+def tokenize(text):
+    return re.findall("[A-Za-z']+", text)
 
 def query_expand(word):
     global NUMBERBATCH
@@ -41,11 +43,11 @@ def db_rank(clue):
     scores = defaultdict(float)
     for match, score in db_search(clue).items():
         scores[slugify(match)] += score * 1000
-        parts = tokenize(match, 'en')
+        parts = tokenize(match)
         for part in parts:
             scores[slugify(part)] += score * 1000 / len(parts)
 
-    for word in tokenize(clue, 'en'):
+    for word in tokenize(clue):
         logprob_result = WORDS.segment_logprob(slugify(word))
         if logprob_result is not None:
             logprob, _ = logprob_result
@@ -54,14 +56,14 @@ def db_rank(clue):
         rare_boost = min(25., -logprob)
         for match, score in db_search(word).items():
             scores[slugify(match)] += rare_boost * score * 10
-            parts = tokenize(match, 'en')
+            parts = tokenize(match)
             for part in parts:
                 scores[slugify(part)] += rare_boost * score * 10 / len(parts)
 
         query = query_expand(word)
         for match, score in db_search(query).items():
             scores[slugify(match)] += rare_boost * score
-            parts = tokenize(match, 'en')
+            parts = tokenize(match)
             for part in parts:
                 scores[slugify(part)] += rare_boost * score / len(parts)
 

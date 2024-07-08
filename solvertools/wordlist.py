@@ -2,7 +2,11 @@ from solvertools.util import db_path, data_path, wordlist_path, corpus_path
 from solvertools.normalize import slugify, unspaced_lower
 from solvertools.regextools import is_exact, regex_len, regex_slice
 from solvertools.letters import (
-    alphagram, anahash, consonantcy, alphabytes, random_letters
+    alphagram,
+    anahash,
+    consonantcy,
+    alphabytes,
+    random_letters,
 )
 import sqlite3
 import re
@@ -13,7 +17,38 @@ from pprint import pprint
 from math import log, exp
 from itertools import islice
 import logging
+
 logger = logging.getLogger(__name__)
+
+
+SCRABBLE_SCORE = {
+    "a": 1,
+    "b": 3,
+    "c": 3,
+    "d": 2,
+    "e": 1,
+    "f": 4,
+    "g": 2,
+    "h": 4,
+    "i": 1,
+    "j": 8,
+    "k": 5,
+    "l": 1,
+    "m": 3,
+    "n": 1,
+    "o": 1,
+    "p": 3,
+    "q": 10,
+    "r": 1,
+    "s": 1,
+    "t": 1,
+    "u": 1,
+    "v": 4,
+    "w": 4,
+    "x": 8,
+    "y": 4,
+    "z": 10,
+}
 
 
 # The NULL_HYPOTHESIS_ENTROPY is the log-probability per letter of something
@@ -39,7 +74,7 @@ class Wordlist:
         )
         """,
         "CREATE UNIQUE INDEX words_slug ON words (slug)",
-        "CREATE INDEX words_freq ON words (freq)"
+        "CREATE INDEX words_freq ON words (freq)",
     ]
     wordplay_schema = [
         "CREATE TABLE wordplay (slug TEXT, alphagram TEXT, anahash TEXT, consonantcy TEXT)",
@@ -55,7 +90,7 @@ class Wordlist:
         Load a wordlist, given its name.
         """
         self.name = name
-        self.db = wordlist_db_connection(name + '.wl.db')
+        self.db = wordlist_db_connection(name + ".wl.db")
         self._word_cache = {}
         self._grep_maps = {}
         self._alpha_maps = {}
@@ -71,6 +106,11 @@ class Wordlist:
         """
         slug = slugify(word)
         return self.lookup_slug(slug) is not None
+
+    def scrabble_score(self, word):
+        slug = slugify(word)
+        score = sum(SCRABBLE_SCORE[letter] for letter in slug)
+        return score
 
     def lookup_slug(self, slug):
         """
@@ -92,13 +132,13 @@ class Wordlist:
         probability and its text. Otherwise, return None.
         """
         if self.logtotal is None:
-            totalfreq, _ = self.lookup_slug('')
+            totalfreq, _ = self.lookup_slug("")
             self.logtotal = log(totalfreq)
         found = self.lookup_slug(slug)
         if found is None:
             return None
         freq, text = found
-        logprob = (log(freq) - self.logtotal)
+        logprob = log(freq) - self.logtotal
         return logprob, text
 
     def freq(self, word):
@@ -107,11 +147,11 @@ class Wordlist:
         Always returns just a number, which is 0 if it's not found.
         """
         if self.logtotal is None:
-            totalfreq, _ = self.lookup_slug('')
+            totalfreq, _ = self.lookup_slug("")
             self.logtotal = log(totalfreq)
         found = self.lookup_slug(slugify(word))
         if found is None:
-            return 0.
+            return 0.0
         else:
             return log(found[0]) - self.logtotal
 
@@ -121,7 +161,7 @@ class Wordlist:
         """
         seg_result = self.segment_logprob(word)
         if seg_result is None:
-            return -1000.
+            return -1000.0
         else:
             return seg_result[0]
 
@@ -132,8 +172,8 @@ class Wordlist:
         """
         slug = slugify(text)
         n = len(slug)
-        best_partial_results = ['']
-        best_logprobs = [0.]
+        best_partial_results = [""]
+        best_logprobs = [0.0]
         for right_edge in range(1, n + 1):
             found = self.segment_logprob(slug[:right_edge])
             if found:
@@ -141,7 +181,7 @@ class Wordlist:
                 best_partial_results.append(rtext)
                 best_logprobs.append(rprob)
             else:
-                best_logprobs.append(-1000.)
+                best_logprobs.append(-1000.0)
                 best_partial_results.append(slug[:right_edge])
             for left_edge in range(1, right_edge):
                 lprob = best_logprobs[left_edge]
@@ -152,7 +192,7 @@ class Wordlist:
                     if totalprob > best_logprobs[right_edge]:
                         best_logprobs[right_edge] = totalprob
                         ltext = best_partial_results[left_edge]
-                        best_partial_results[right_edge] = ltext + ' ' + rtext
+                        best_partial_results[right_edge] = ltext + " " + rtext
         return best_logprobs[-1], best_partial_results[-1]
 
     def cromulence(self, text):
@@ -162,7 +202,7 @@ class Wordlist:
         """
         slug = slugify(text)
         if len(slug) == 0:
-            return (0, '')
+            return (0, "")
         logprob, found_text = self.text_logprob(slug)
         entropy = logprob / (len(slug) + 1)
         cromulence = round((entropy - NULL_HYPOTHESIS_ENTROPY) * DECIBEL_SCALE, 1)
@@ -202,23 +242,21 @@ class Wordlist:
         for cur_length in range(minlen, maxlen + 1):
             if cur_length not in self._grep_maps:
                 mm = self._open_mmap(
-                    wordlist_path_from_name(
-                        'greppable/%s.%d' % (self.name, cur_length)
-                    )
+                    wordlist_path_from_name("greppable/%s.%d" % (self.name, cur_length))
                 )
                 self._grep_maps[cur_length] = mm
             else:
                 mm = self._grep_maps[cur_length]
-            pbytes = pattern.encode('ascii').replace(b'[^',b'[^,')
-            pattern1 = b'^' + pbytes + b','
-            pattern2 = b'\n' + pbytes + b','
+            pbytes = pattern.encode("ascii").replace(b"[^", b"[^,")
+            pattern1 = b"^" + pbytes + b","
+            pattern2 = b"\n" + pbytes + b","
             match = re.match(pattern1, mm)
             if match:
-                found = mm[match.start():match.end() - 1].decode('ascii')
+                found = mm[match.start() : match.end() - 1].decode("ascii")
                 num_found += 1
                 yield self.segment_logprob(found)
             for match in re.finditer(pattern2, mm):
-                found = mm[match.start() + 1:match.end() - 1].decode('ascii')
+                found = mm[match.start() + 1 : match.end() - 1].decode("ascii")
 
                 num_found += 1
                 yield self.segment_logprob(found)
@@ -271,10 +309,9 @@ class Wordlist:
                         found = list(islice(self.grep(segment), count))
                         for lprob, ltext in best_partial_results[left_edge]:
                             for rprob, rtext in found:
-                                results_this_step.append((
-                                    lprob + rprob - log(10),
-                                    ltext + ' ' + rtext
-                                ))
+                                results_this_step.append(
+                                    (lprob + rprob - log(10), ltext + " " + rtext)
+                                )
                 results_this_step.sort(reverse=True)
                 best_partial_results.append(results_this_step[:count])
             found = best_partial_results[-1]
@@ -283,12 +320,11 @@ class Wordlist:
             return found
         else:
             results = []
-            for (logprob, text) in found:
+            for logprob, text in found:
                 cromulence = self.logprob_to_cromulence(logprob, len(slugify(text)))
                 results.append((cromulence, text))
             results.sort(reverse=True)
             return results
-
 
     def _iter_query(self, query, params=()):
         c = self.db.cursor()
@@ -315,9 +351,7 @@ class Wordlist:
         Read the database and iterate through it in descending order
         by frequency.
         """
-        return self._iter_query(
-            "SELECT slug, freq, text FROM words ORDER BY freq DESC"
-        )
+        return self._iter_query("SELECT slug, freq, text FROM words ORDER BY freq DESC")
 
     def iter_all_by_cromulence(self):
         """
@@ -337,19 +371,17 @@ class Wordlist:
             max_length = 2
         if max_length not in self._alpha_maps:
             mm = self._open_mmap(
-                wordlist_path_from_name(
-                    'alphabytes/%s.%d' % (self.name, max_length)
-                )
+                wordlist_path_from_name("alphabytes/%s.%d" % (self.name, max_length))
             )
             self._alpha_maps[max_length] = mm
         else:
             mm = self._alpha_maps[max_length]
         if wildcard:
-            pattern = b'\n[' + abytes + b']*.[' + abytes + b']*\n'
+            pattern = b"\n[" + abytes + b"]*.[" + abytes + b"]*\n"
         else:
-            pattern = b'\n[' + abytes + b']+\n'
+            pattern = b"\n[" + abytes + b"]+\n"
         for match in re.finditer(pattern, mm):
-            found = mm[match.start() + 1:match.end() - 1]
+            found = mm[match.start() + 1 : match.end() - 1]
             yield found
 
     def find_by_alphagram(self, alphagram):
@@ -357,7 +389,7 @@ class Wordlist:
             "SELECT w.* from wordplay wp, words w "
             "WHERE wp.slug=w.slug and wp.alphagram=? "
             "ORDER BY freq DESC",
-            (alphagram,)
+            (alphagram,),
         )
 
     def find_by_alphagram_raw(self, alphagram):
@@ -365,7 +397,7 @@ class Wordlist:
             "SELECT w.slug from wordplay wp, words w "
             "WHERE wp.slug=w.slug and wp.alphagram=? "
             "ORDER BY freq DESC",
-            (alphagram,)
+            (alphagram,),
         )
 
     def find_by_anahash_raw(self, anahash):
@@ -373,7 +405,7 @@ class Wordlist:
             "SELECT w.slug from wordplay wp, words w "
             "WHERE wp.slug=w.slug and wp.anahash=? "
             "ORDER BY freq DESC",
-            (anahash,)
+            (anahash,),
         )
 
     def find_by_consonantcy(self, consonants):
@@ -381,7 +413,7 @@ class Wordlist:
             "SELECT w.* from wordplay wp, words w "
             "WHERE wp.slug=w.slug and wp.consonantcy=? "
             "ORDER BY freq DESC",
-            (consonants,)
+            (consonants,),
         )
 
     def __getitem__(self, pattern):
@@ -391,7 +423,7 @@ class Wordlist:
         return "Wordlist(%r)" % self.name
 
     def _open_mmap(self, path):
-        openfile = open(path, 'r+b')
+        openfile = open(path, "r+b")
         mm = mmap.mmap(openfile.fileno(), 0, access=mmap.ACCESS_READ)
         return mm
 
@@ -408,9 +440,8 @@ class Wordlist:
         with self.db:
             for i, slug, freq, text in read_wordlist(self.name):
                 self.db.execute(
-                    "INSERT INTO words (slug, freq, text) "
-                    "VALUES (?, ?, ?)",
-                    (slug, freq, text)
+                    "INSERT INTO words (slug, freq, text) " "VALUES (?, ?, ?)",
+                    (slug, freq, text),
                 )
                 total += freq
                 if i % 100000 == 0:
@@ -419,8 +450,7 @@ class Wordlist:
             # Use the empty string to record the total
             print("Total: %d" % total)
             self.db.execute(
-                "INSERT INTO words (slug, freq, text) VALUES ('', ?, '')",
-                (total,)
+                "INSERT INTO words (slug, freq, text) VALUES ('', ?, '')", (total,)
             )
 
     def build_wordplay(self):
@@ -436,7 +466,7 @@ class Wordlist:
                 self.db.execute(
                     "INSERT INTO wordplay (slug, alphagram, anahash, consonantcy) "
                     "VALUES (?, ?, ?, ?)",
-                    (slug, alpha, ana, cons)
+                    (slug, alpha, ana, cons),
                 )
                 if i % 100000 == 0:
                     print("\t%s" % (text))
@@ -445,12 +475,12 @@ class Wordlist:
         """
         Separate the words by length and write them into separate files.
         """
-        os.makedirs(wordlist_path('greppable'), exist_ok=True)
+        os.makedirs(wordlist_path("greppable"), exist_ok=True)
         length_files = {
             length: open(
-                wordlist_path_from_name(
-                    'greppable/%s.%d' % (self.name, length)
-                ), 'w', encoding='ascii'
+                wordlist_path_from_name("greppable/%s.%d" % (self.name, length)),
+                "w",
+                encoding="ascii",
             )
             for length in range(1, self.max_indexed_length + 1)
         }
@@ -467,12 +497,10 @@ class Wordlist:
             file.close()
 
     def write_alphabytes(self):
-        os.makedirs(wordlist_path('alphabytes'), exist_ok=True)
+        os.makedirs(wordlist_path("alphabytes"), exist_ok=True)
         length_files = {
             length: open(
-                wordlist_path_from_name(
-                    'alphabytes/%s.%d' % (self.name, length)
-                ), 'wb'
+                wordlist_path_from_name("alphabytes/%s.%d" % (self.name, length)), "wb"
             )
             for length in range(2, self.max_indexed_length + 1)
         }
@@ -485,11 +513,11 @@ class Wordlist:
                 if abytes not in used:
                     for length in range(len(slug), maxlen + 1):
                         out = length_files[length]
-                        out.write(b'\n')
+                        out.write(b"\n")
                         out.write(abytes)
                         used.add(abytes)
         for file in length_files.values():
-            file.write(b'\n')
+            file.write(b"\n")
             file.close()
 
     def test_cromulence(self):
@@ -513,39 +541,41 @@ class Wordlist:
             0.2  DNA ARRRGH AH
         """
         real_answers = []
-        years = ['1994', '1997'] + [str(year) for year in range(1999, 2021)]
+        years = ["1994", "1997"] + [str(year) for year in range(1999, 2021)]
         for year in years:
-            with open(corpus_path('mh_answers/mystery%s.txt' % year)) as file:
+            with open(corpus_path("mh_answers/mystery%s.txt" % year)) as file:
                 for line in file:
                     line = line.strip()
                     if line:
-                        answer, _typ = line.rsplit(',', 1)
+                        answer, _typ = line.rsplit(",", 1)
                         if slugify(answer):
                             real_answers.append(answer)
-        fake_answers = [
-            random_letters(len(real)) for real in real_answers
-        ]
+        fake_answers = [random_letters(len(real)) for real in real_answers]
         results = []
         for ans in real_answers:
             cromulence, spaced = self.cromulence(ans)
             logprob, _ = self.text_logprob(ans)
             if cromulence > 0:
-                results.append((cromulence, logprob, spaced, 'true positive'))
+                results.append((cromulence, logprob, spaced, "true positive"))
             else:
-                results.append((cromulence, logprob, spaced, 'false negative'))
+                results.append((cromulence, logprob, spaced, "false negative"))
         for ans in fake_answers:
             cromulence, spaced = self.cromulence(ans)
             logprob, _ = self.text_logprob(ans)
             if cromulence > 0:
-                results.append((cromulence, logprob, spaced, 'false positive'))
+                results.append((cromulence, logprob, spaced, "false positive"))
             else:
-                results.append((cromulence, logprob, spaced, 'true negative'))
+                results.append((cromulence, logprob, spaced, "true negative"))
 
         results.sort(reverse=True)
         counts = Counter([item[-1] for item in results])
-        precision = counts['true positive'] / (counts['true positive'] + counts['false positive'])
-        recall = counts['true positive'] / (counts['true positive'] + counts['false negative'])
-        f_score = 2/(1/precision + 1/recall)
+        precision = counts["true positive"] / (
+            counts["true positive"] + counts["false positive"]
+        )
+        recall = counts["true positive"] / (
+            counts["true positive"] + counts["false negative"]
+        )
+        f_score = 2 / (1 / precision + 1 / recall)
         for cromulence, logprob, spaced, category in results:
             print("%1.1f\t%2.2f\t%s\t%s" % (cromulence, logprob, category, spaced))
         print("Precision: %2.2f%%" % (precision * 100))
@@ -558,7 +588,7 @@ class Wordlist:
         for logprob, text, info in results[:count]:
             cromulence, spaced = self.cromulence(text)
             if info is None:
-                info = ''
+                info = ""
             print("%1.1f\t%s\t%s" % (cromulence, spaced, info))
         return results[:count]
 
@@ -567,7 +597,7 @@ def wordlist_path_from_name(name):
     """
     Get the path to the plain-text form of a wordlist.
     """
-    return wordlist_path(name + '.txt')
+    return wordlist_path(name + ".txt")
 
 
 def wordlist_db_connection(filename):
@@ -575,7 +605,7 @@ def wordlist_db_connection(filename):
     Get a SQLite DB connection for a wordlist. (The DB must previously
     have been built.)
     """
-    os.makedirs(db_path(''), exist_ok=True)
+    os.makedirs(db_path(""), exist_ok=True)
     return sqlite3.connect(db_path(filename), check_same_thread=False)
 
 
@@ -585,12 +615,12 @@ def read_wordlist(name):
     its entries in order.
     """
     filepath = wordlist_path_from_name(name)
-    with open(filepath, encoding='utf-8') as wordfile:
+    with open(filepath, encoding="utf-8") as wordfile:
         for i, line in enumerate(wordfile):
-            if ',' not in line:
+            if "," not in line:
                 continue
             line = line.rstrip()
-            text, freq = line.split(',', 1)
+            text, freq = line.split(",", 1)
             freq = int(freq)
             slug = slugify(text)
             if slug:
@@ -611,7 +641,7 @@ def combine_wordlists(weighted_lists, out_name):
         for i, slug, freq, text in read_wordlist(name):
             # Turns out that things that just barely make our cutoff from
             # Google Books are worse than you'd think
-            if name == 'google-books-1grams':
+            if name == "google-books-1grams":
                 freq -= 1000
                 if freq <= 0:
                     continue
@@ -627,7 +657,7 @@ def combine_wordlists(weighted_lists, out_name):
 
     alphabetized = sorted(list(texts))
     out_filename = wordlist_path_from_name(out_name)
-    with open(out_filename, 'w', encoding='utf-8') as out:
+    with open(out_filename, "w", encoding="utf-8") as out:
         print("Writing %r" % out)
         for i, slug in enumerate(alphabetized):
             freq = int(freqs[slug])
@@ -652,8 +682,8 @@ def build_extras(name):
     dbw.build_wordplay()
 
 
-WORDS = Wordlist('combined')
-SCRAB = Wordlist('scrab')
+WORDS = Wordlist("combined")
+SCRAB = Wordlist("scrab")
 
 
 def cromulence(text):
@@ -668,5 +698,5 @@ def find_by_consonantcy(text):
     return WORDS.find_by_consonantcy(consonantcy(slugify(text)))
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     WORDS.test_cromulence()

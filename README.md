@@ -31,9 +31,9 @@ To install the code in this environment, run:
 
     sudo python3 setup.py develop
 
-You'll need data, which you can download:
+You'll need data, which you can download **(it's now in an S3 bucket, so it's available even when ireproof.org is not hosting it)**:
 
-    wget http://tools.ireproof.org/static/solvertools-data-2021.zip
+    wget https://s3.us-east-1.amazonaws.com/ireproof.org/solvertools-data-2021.zip
     unzip solvertools-data-2021.zip
 
 Partial instructions for setting up on Windows
